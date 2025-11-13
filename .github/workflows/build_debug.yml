@@ -22,6 +22,16 @@ jobs:
 
       # --- 여기부터는 기존 워크플로우와 동일합니다 ---
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r Mundi/Tools/CodeGenerator/requirements.txt
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
@@ -30,6 +40,12 @@ jobs:
           chcp 65001
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+
+      - name: Run Code Generation
+        shell: pwsh
+        run: |
+          $env:PYTHONIOENCODING = "utf-8"
+          python Mundi/Tools/CodeGenerator/generate.py --source Mundi/Source/Runtime --output Mundi/Generated --vcxproj Mundi/Mundi.vcxproj
 
       - name: Build Solution
         run: |
