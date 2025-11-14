@@ -1,7 +1,6 @@
 ﻿#pragma once
-
-#include <d3d11.h>
-#include <dxgi.h>
+#include <d2d1_1.h>
+#include <dwrite.h>
 
 class FGPUTimer;
 
@@ -48,7 +47,7 @@ private:
     UStatsOverlayD2D& operator=(const UStatsOverlayD2D&) = delete;
 
     void EnsureInitialized();
-    void ReleaseD2DTarget();
+    void ReleaseD2DResources();
 
 private:
     bool bInitialized = false;
@@ -66,4 +65,19 @@ private:
     IDXGISwapChain* SwapChain = nullptr;
 
     FGPUTimer* GPUTimer = nullptr;
+
+    ID2D1Factory1* D2DFactory = nullptr;
+    ID2D1Device* D2DDevice = nullptr;
+    ID2D1DeviceContext* D2DContext = nullptr;
+    IDWriteFactory* DWriteFactory = nullptr;
+    IDWriteTextFormat* TextFormat = nullptr;
+
+    ID2D1SolidColorBrush* BrushYellow = nullptr;
+    ID2D1SolidColorBrush* BrushSkyBlue = nullptr;
+    ID2D1SolidColorBrush* BrushLightGreen = nullptr;
+    ID2D1SolidColorBrush* BrushOrange = nullptr;
+    ID2D1SolidColorBrush* BrushCyan = nullptr;
+    ID2D1SolidColorBrush* BrushViolet = nullptr;
+    ID2D1SolidColorBrush* BrushDeepPink = nullptr;
+    ID2D1SolidColorBrush* BrushBlack = nullptr;
 };
