@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "SceneRenderer.h"
+#include "GPUProfiler.h"
 
 // FSceneRenderer가 사용하는 모든 헤더 포함
 #include "World.h"
@@ -54,6 +55,7 @@ FSceneRenderer::FSceneRenderer(UWorld* InWorld, FSceneView* InView, URenderer* I
 	, View(InView) // 전달받은 FSceneView 저장
 	, OwnerRenderer(InOwnerRenderer)
 	, RHIDevice(InOwnerRenderer->GetRHIDevice())
+	, GPUTimer(nullptr)
 {
 	//OcclusionCPU = std::make_unique<FOcclusionCullingManagerCPU>();
 
@@ -62,12 +64,20 @@ FSceneRenderer::FSceneRenderer(UWorld* InWorld, FSceneView* InView, URenderer* I
 	uint32 TileSize = World->GetRenderSettings().GetTileSize();
 	TileLightCuller->Initialize(RHIDevice, TileSize);
 
+	// GPU 타이머 초기화
+	GPUTimer = new FGPUTimer(RHIDevice->GetDevice(), RHIDevice->GetDeviceContext());
+
 	// 라인 수집 시작
 	OwnerRenderer->BeginLineBatch();
 }
 
 FSceneRenderer::~FSceneRenderer()
 {
+	if (GPUTimer)
+	{
+		delete GPUTimer;
+		GPUTimer = nullptr;
+	}
 }
 
 //====================================================================================
@@ -76,6 +86,12 @@ FSceneRenderer::~FSceneRenderer()
 void FSceneRenderer::Render()
 {
     if (!IsValid()) return;
+
+	// GPU 타이머 프레임 시작
+	if (GPUTimer)
+	{
+		GPUTimer->BeginFrame();
+	}
 
 	/*static bool Loaded = false;
 	if (!Loaded)
@@ -139,6 +155,12 @@ void FSceneRenderer::Render()
 
     // BackBuffer 위에 라인 오버레이(항상 위)를 그린다
     RenderFinalOverlayLines();
+
+	// GPU 타이머 프레임 종료
+	if (GPUTimer)
+	{
+		GPUTimer->EndFrame();
+	}
 }
 
 //====================================================================================
@@ -147,6 +169,8 @@ void FSceneRenderer::Render()
 
 void FSceneRenderer::RenderLitPath()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "RenderLitPath", GPUTimer);
+
     RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 
 	// 이 뷰의 rect 영역에 대해 Scene Color를 클리어하여 불투명한 배경을 제공함
@@ -171,6 +195,8 @@ void FSceneRenderer::RenderLitPath()
 
 void FSceneRenderer::RenderWireframePath()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "WireframePath", GPUTimer);
+
 	// 깊이 버퍼 초기화 후 ID만 그리기
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneIdTarget);
@@ -188,6 +214,8 @@ void FSceneRenderer::RenderWireframePath()
 
 void FSceneRenderer::RenderSceneDepthPath()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "SceneDepthPath", GPUTimer);
+
 	// ✅ 디버그: SceneRTV 전환 전 viewport 확인
 	D3D11_VIEWPORT vpBefore;
 	UINT numVP = 1;
@@ -238,6 +266,8 @@ void FSceneRenderer::RenderShadowMaps()
 {
     FLightManager* LightManager = World->GetLightManager();
 	if (!LightManager) return;
+
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "ShadowMaps", GPUTimer);
 
 	// 2. 그림자 캐스터(Caster) 메시 수집
 	TArray<FMeshBatchElement> ShadowMeshBatches;
@@ -868,6 +898,8 @@ void FSceneRenderer::PerformFrustumCulling()
 
 void FSceneRenderer::RenderOpaquePass(EViewMode InRenderViewMode)
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "OpaquePass", GPUTimer);
+
 	// --- 1. 수집 (Collect) ---
 	MeshBatchElements.Empty();
 	for (UMeshComponent* MeshComponent : Proxies.Meshes)
@@ -901,6 +933,8 @@ void FSceneRenderer::RenderDecalPass()
 	// WorldNormal 모드에서는 Decal 렌더링 스킵
 	if (View->RenderSettings->GetViewMode() == EViewMode::VMI_WorldNormal)
 		return;
+
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "DecalPass", GPUTimer);
 
 	UWorldPartitionManager* Partition = World->GetPartitionManager();
 	if (!Partition)
@@ -1032,16 +1066,28 @@ void FSceneRenderer::RenderPostProcessingPasses()
 		switch (Modifier.Type)
 		{
 		case EPostProcessEffectType::HeightFog:
-			HeightFogPass.Execute(Modifier, View, RHIDevice);
+			{
+				GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "HeightFog", GPUTimer);
+				HeightFogPass.Execute(Modifier, View, RHIDevice);
+			}
 			break;
 		case EPostProcessEffectType::Fade:
-			FadeInOutPass.Execute(Modifier, View, RHIDevice);
+			{
+				GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "Fade", GPUTimer);
+				FadeInOutPass.Execute(Modifier, View, RHIDevice);
+			}
 			break;
 		case EPostProcessEffectType::Vignette:
-			VignettePass.Execute(Modifier, View, RHIDevice);
+			{
+				GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "Vignette", GPUTimer);
+				VignettePass.Execute(Modifier, View, RHIDevice);
+			}
 			break;
 		case EPostProcessEffectType::Gamma:
-			GammaPass.Execute(Modifier, View, RHIDevice);
+			{
+				GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "Gamma", GPUTimer);
+				GammaPass.Execute(Modifier, View, RHIDevice);
+			}
 			break;
 		}
 	}
@@ -1159,6 +1205,8 @@ void FSceneRenderer::RenderTileCullingDebug()
 // 빌보드, 에디터 화살표 그리기 (상호 작용, 피킹 O)
 void FSceneRenderer::RenderEditorPrimitivesPass()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "EditorPrimitives", GPUTimer);
+
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 	for (UPrimitiveComponent* GizmoComp : Proxies.EditorPrimitives)
 	{
@@ -1170,6 +1218,8 @@ void FSceneRenderer::RenderEditorPrimitivesPass()
 // 경계, 외곽선 등 표시 (상호 작용, 피킹 X)
 void FSceneRenderer::RenderDebugPass()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "DebugPass", GPUTimer);
+
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	// 그리드 라인 수집
@@ -1225,6 +1275,8 @@ void FSceneRenderer::RenderDebugPass()
 
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 {
+	GPU_EVENT_TIMER(RHIDevice->GetDeviceContext(), "OverlayPrimitives", GPUTimer);
+
 	// 후처리된 최종 이미지 위에 원본 씬의 뎁스 버퍼를 사용하여 3D 오버레이를 렌더링합니다.
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 
