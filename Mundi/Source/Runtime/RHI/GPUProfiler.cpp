@@ -78,59 +78,88 @@ std::wstring FGPUEventScope::ConvertToWide(const char* InStr)
 FGPUTimer::FGPUTimer(ID3D11Device* InDevice, ID3D11DeviceContext* InContext)
 	: Device(InDevice)
 	, Context(InContext)
-	, FrameDisjointQuery(nullptr)
+	, CurrentQueryIndex(0)
 	, bFrameActive(false)
 {
+	for (int32 i = 0; i < BufferCount; ++i)
+	{
+		FrameDisjointQueries[i] = nullptr;
+	}
+
 	if (!Device || !Context)
 	{
 		return;
 	}
 
-	// 프레임 단위 Disjoint Query 생성
 	D3D11_QUERY_DESC DisjointDesc = {};
 	DisjointDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-	Device->CreateQuery(&DisjointDesc, &FrameDisjointQuery);
+	for (int32 i = 0; i < BufferCount; ++i)
+	{
+		Device->CreateQuery(&DisjointDesc, &FrameDisjointQueries[i]);
+	}
 }
 
 FGPUTimer::~FGPUTimer()
 {
-	if (FrameDisjointQuery)
+	for (int32 i = 0; i < BufferCount; ++i)
 	{
-		FrameDisjointQuery->Release();
+		if (FrameDisjointQueries[i])
+		{
+			FrameDisjointQueries[i]->Release();
+		}
 	}
 
 	for (auto& Timer : Timers)
 	{
-		if (Timer.DisjointQuery) Timer.DisjointQuery->Release();
-		if (Timer.StartQuery) Timer.StartQuery->Release();
-		if (Timer.EndQuery) Timer.EndQuery->Release();
+		if (Timer.DisjointQuery)
+		{
+			Timer.DisjointQuery->Release();
+		}
+		for (int32 i = 0; i < FTimerQuery::BufferCount; ++i)
+		{
+			if (Timer.StartQueries[i])
+			{
+				Timer.StartQueries[i]->Release();
+			}
+			if (Timer.EndQueries[i])
+			{
+				Timer.EndQueries[i]->Release();
+			}
+		}
 	}
 }
 
 void FGPUTimer::BeginFrame()
 {
-	if (!Context || !FrameDisjointQuery)
+	ID3D11Query* CurrentQuery = FrameDisjointQueries[CurrentQueryIndex];
+	if (!Context || !CurrentQuery)
 	{
 		return;
 	}
 
-	// 이전 프레임 결과 수집
-	ResolveTimers();
-
-	// 새 프레임 시작
-	Context->Begin(FrameDisjointQuery);
+	Context->Begin(CurrentQuery);
 	bFrameActive = true;
 }
 
 void FGPUTimer::EndFrame()
 {
-	if (!Context || !FrameDisjointQuery || !bFrameActive)
+	ID3D11Query* CurrentQuery = FrameDisjointQueries[CurrentQueryIndex];
+	if (!Context || !CurrentQuery || !bFrameActive)
 	{
 		return;
 	}
 
-	Context->End(FrameDisjointQuery);
+	Context->End(CurrentQuery);
 	bFrameActive = false;
+
+	int32 ResolveQueryIndex = (CurrentQueryIndex + 1) % BufferCount;
+	ID3D11Query* ResolveQuery = FrameDisjointQueries[ResolveQueryIndex];
+	if (ResolveQuery)
+	{
+		ResolveTimers(ResolveQueryIndex);
+	}
+
+	CurrentQueryIndex = (CurrentQueryIndex + 1) % BufferCount;
 }
 
 void FGPUTimer::BeginTimer(const char* InName)
@@ -141,9 +170,9 @@ void FGPUTimer::BeginTimer(const char* InName)
 	}
 
 	FTimerQuery* Timer = FindOrCreateTimer(InName);
-	if (Timer && Timer->StartQuery)
+	if (Timer && Timer->StartQueries[CurrentQueryIndex])
 	{
-		Context->End(Timer->StartQuery);
+		Context->End(Timer->StartQueries[CurrentQueryIndex]);
 		Timer->bActive = true;
 	}
 }
@@ -156,9 +185,9 @@ void FGPUTimer::EndTimer(const char* InName)
 	}
 
 	FTimerQuery* Timer = FindOrCreateTimer(InName);
-	if (Timer && Timer->EndQuery && Timer->bActive)
+	if (Timer && Timer->EndQueries[CurrentQueryIndex] && Timer->bActive)
 	{
-		Context->End(Timer->EndQuery);
+		Context->End(Timer->EndQueries[CurrentQueryIndex]);
 		Timer->bActive = false;
 	}
 }
@@ -208,41 +237,54 @@ FTimerQuery* FGPUTimer::FindOrCreateTimer(const char* InName)
 		}
 	}
 
-	// 새 타이머 생성
 	FTimerQuery NewTimer;
 	NewTimer.Name = InName;
 
 	D3D11_QUERY_DESC QueryDesc = {};
 	QueryDesc.Query = D3D11_QUERY_TIMESTAMP;
 
-	Device->CreateQuery(&QueryDesc, &NewTimer.StartQuery);
-	Device->CreateQuery(&QueryDesc, &NewTimer.EndQuery);
+	for (int32 i = 0; i < FTimerQuery::BufferCount; ++i)
+	{
+		Device->CreateQuery(&QueryDesc, &NewTimer.StartQueries[i]);
+		Device->CreateQuery(&QueryDesc, &NewTimer.EndQueries[i]);
+	}
 
 	Timers.push_back(NewTimer);
 	return &Timers.back();
 }
 
-void FGPUTimer::ResolveTimers()
+void FGPUTimer::ResolveTimers(int32 QueryIndex)
 {
-	if (!Context || !FrameDisjointQuery)
+	if (!Context)
 	{
 		return;
 	}
 
-	// Disjoint Query 결과 대기
+	ID3D11Query* DisjointQuery = FrameDisjointQueries[QueryIndex];
+	if (!DisjointQuery)
+	{
+		return;
+	}
+
 	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointData = {};
-	HRESULT hr = Context->GetData(FrameDisjointQuery, &DisjointData, sizeof(DisjointData), 0);
+	HRESULT Result = Context->GetData(DisjointQuery, &DisjointData, sizeof(DisjointData), 0);
 
-	if (hr != S_OK || DisjointData.Disjoint)
+	if (Result != S_OK)
 	{
-		// GPU 타이밍이 불연속적이면 결과 무시
 		return;
 	}
 
-	// 각 타이머 결과 수집
+	if (DisjointData.Disjoint)
+	{
+		return;
+	}
+
 	for (auto& Timer : Timers)
 	{
-		if (!Timer.StartQuery || !Timer.EndQuery)
+		ID3D11Query* StartQuery = Timer.StartQueries[QueryIndex];
+		ID3D11Query* EndQuery = Timer.EndQueries[QueryIndex];
+
+		if (!StartQuery || !EndQuery)
 		{
 			continue;
 		}
@@ -250,19 +292,18 @@ void FGPUTimer::ResolveTimers()
 		uint64 StartTime = 0;
 		uint64 EndTime = 0;
 
-		hr = Context->GetData(Timer.StartQuery, &StartTime, sizeof(uint64), 0);
-		if (hr != S_OK)
+		Result = Context->GetData(StartQuery, &StartTime, sizeof(uint64), 0);
+		if (Result != S_OK)
 		{
 			continue;
 		}
 
-		hr = Context->GetData(Timer.EndQuery, &EndTime, sizeof(uint64), 0);
-		if (hr != S_OK)
+		Result = Context->GetData(EndQuery, &EndTime, sizeof(uint64), 0);
+		if (Result != S_OK)
 		{
 			continue;
 		}
 
-		// 시간 계산 (밀리초)
 		uint64 Delta = EndTime - StartTime;
 		Timer.LastTimeMs = static_cast<float>(Delta) / static_cast<float>(DisjointData.Frequency) * 1000.0f;
 	}

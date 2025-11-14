@@ -14,20 +14,25 @@ class FGPUTimer;
 
 struct FTimerQuery
 {
+	static constexpr int32 BufferCount = 32;
+
 	FString Name;
 	ID3D11Query* DisjointQuery;
-	ID3D11Query* StartQuery;
-	ID3D11Query* EndQuery;
+	ID3D11Query* StartQueries[BufferCount];
+	ID3D11Query* EndQueries[BufferCount];
 	float LastTimeMs;
 	bool bActive;
 
 	FTimerQuery()
 		: DisjointQuery(nullptr)
-		  , StartQuery(nullptr)
-		  , EndQuery(nullptr)
 		  , LastTimeMs(0.0f)
 		  , bActive(false)
 	{
+		for (int32 i = 0; i < BufferCount; ++i)
+		{
+			StartQueries[i] = nullptr;
+			EndQueries[i] = nullptr;
+		}
 	}
 };
 
@@ -96,13 +101,15 @@ public:
 
 private:
 	FTimerQuery* FindOrCreateTimer(const char* InName);
-	void ResolveTimers();
+	void ResolveTimers(int32 QueryIndex);
 
 	ID3D11Device* Device;
 	ID3D11DeviceContext* Context;
 	TArray<FTimerQuery> Timers;
 
-	ID3D11Query* FrameDisjointQuery;
+	static constexpr int32 BufferCount = 32;
+	ID3D11Query* FrameDisjointQueries[BufferCount];
+	int32 CurrentQueryIndex;
 	bool bFrameActive;
 };
 
