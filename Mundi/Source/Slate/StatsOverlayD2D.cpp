@@ -170,7 +170,6 @@ static void DrawTextBlock(
 void UStatsOverlayD2D::Draw()
 {
 	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow && !bShowGPU && !bShowSkinning) || !SwapChain)
-	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow && !bShowGPU) || !SwapChain)
 	{
 		return;
 	}
@@ -385,8 +384,6 @@ void UStatsOverlayD2D::Draw()
 		NextY += GPUPanelHeight + Space;
 	}
 
-	D2DContext->EndDraw();
-	D2DContext->SetTarget(nullptr);
 	if (bShowSkinning && GPUTimer)
 	{
 		const ESkinningMode SkinningMode = GWorld->GetRenderSettings().GetSkinningMode();
@@ -411,16 +408,18 @@ void UStatsOverlayD2D::Draw()
 		constexpr float SkinningPanelHeight = 130.0f;
 		D2D1_RECT_F rc = D2D1::RectF(Margin, NextY, Margin + PanelWidth, NextY + SkinningPanelHeight);
 
-		DrawTextBlock(
-		   D2dCtx, Dwrite, Buf, rc, 16.0f,
-		   D2D1::ColorF(0, 0, 0, 0.6f),
-		   D2D1::ColorF(D2D1::ColorF::LawnGreen));
+		ID2D1SolidColorBrush* BrushLawnGreen = nullptr;
+		D2DContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LawnGreen), &BrushLawnGreen);
+
+		DrawTextBlock(D2DContext, TextFormat, Buf, rc, BrushBlack, BrushLawnGreen);
+
+		SafeRelease(BrushLawnGreen);
 
 		NextY += SkinningPanelHeight + Space;
 	}
 
-	D2dCtx->EndDraw();
-	D2dCtx->SetTarget(nullptr);
+	D2DContext->EndDraw();
+	D2DContext->SetTarget(nullptr);
 
 	FScopeCycleCounter::TimeProfileInit();
 
