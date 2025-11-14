@@ -1933,8 +1933,6 @@ void SViewportWindow::RenderShowFlagDropdownMenu()
 		}
 
 		// ===== 스키닝 모드 =====
-		ImGui::Separator(); // 이전 섹션과 구분
-
 		if (IconSkinning && IconSkinning->GetShaderResourceView())
 		{
 		   ImGui::Image((void*)IconSkinning->GetShaderResourceView(), IconSize);
