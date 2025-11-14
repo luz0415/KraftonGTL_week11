@@ -2,6 +2,7 @@
 #include "AnimationAsset.h"
 
 class UAnimDataModel;
+struct FAnimNotifyEvent;
 
 /**
  * UAnimSequenceBase
@@ -19,6 +20,22 @@ public:
 	virtual UAnimDataModel* GetDataModel() const { return DataModel; }
 	virtual void SetDataModel(UAnimDataModel* InDataModel) { DataModel = InDataModel; }
 
+	// Notify 관리
+	void SortNotifies();
+	void GetAnimNotifiesFromDeltaPositions(float PreviousTime, float CurrentTime, TArray<const FAnimNotifyEvent*>& OutNotifies) const;
+	void AddNotify(const FAnimNotifyEvent& NewNotify);
+	void ClearNotifies();
+
+	// Getters
+	virtual float GetPlayLength() const { return SequenceLength; }
+	bool IsLooping() const { return bLoop; }
+
 protected:
 	UAnimDataModel* DataModel;
+
+private:
+	TArray<FAnimNotifyEvent> Notifies;
+	float SequenceLength;
+	float RateScale;
+	bool bLoop;
 };

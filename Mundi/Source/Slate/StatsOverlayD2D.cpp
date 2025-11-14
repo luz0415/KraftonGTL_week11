@@ -1,15 +1,15 @@
 ﻿#include "pch.h"
-
 #include <d2d1_1.h>
 #include <dwrite.h>
 #include <dxgi1_2.h>
-
+#include <algorithm>
 #include "StatsOverlayD2D.h"
 #include "UIManager.h"
 #include "MemoryManager.h"
 #include "Picking.h"
 #include "PlatformTime.h"
 #include "DecalStatManager.h"
+#include "GPUProfiler.h"
 #include "TileCullingStats.h"
 #include "LightStats.h"
 #include "ShadowStats.h"
@@ -98,7 +98,7 @@ static void DrawTextBlock(
 
 void UStatsOverlayD2D::Draw()
 {
-	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow) || !SwapChain)
+	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow && !bShowGPU && !bShowSkinning) || !SwapChain)
 		return;
 
 	ID2D1Factory1* D2dFactory = nullptr;
@@ -178,7 +178,7 @@ void UStatsOverlayD2D::Draw()
 	D2dCtx->BeginDraw();
 	const float Margin = 12.0f;
 	const float Space = 8.0f;   // 패널간의 간격
-	const float PanelWidth = 200.0f;
+	const float PanelWidth = 250.0f;
 	const float PanelHeight = 48.0f;
 	float NextY = 70.0f;
 
@@ -373,12 +373,76 @@ void UStatsOverlayD2D::Draw()
 
 		NextY += shadowPanelHeight + Space;
 	}
-	
+
+	if (bShowGPU && GPUTimer)
+	{
+		wchar_t Buf[512];
+		swprintf_s(Buf,
+			L"=== GPU Timings ===\n"
+			L"RenderLitPath: %.3f ms\n"
+			L"ShadowMaps: %.3f ms\n"
+			L"OpaquePass: %.3f ms\n"
+			L"DecalPass: %.3f ms\n"
+			L"HeightFog: %.3f ms\n"
+			L"EditorPrimitives: %.3f ms\n"
+			L"DebugPass: %.3f ms\n"
+			L"OverlayPrimitives: %.3f ms",
+			GPUTimer->GetTime("RenderLitPath"),
+			GPUTimer->GetTime("ShadowMaps"),
+			GPUTimer->GetTime("OpaquePass"),
+			GPUTimer->GetTime("DecalPass"),
+			GPUTimer->GetTime("HeightFog"),
+			GPUTimer->GetTime("EditorPrimitives"),
+			GPUTimer->GetTime("DebugPass"),
+			GPUTimer->GetTime("OverlayPrimitives"));
+
+		constexpr float GPUPanelHeight = 200.0f;
+		D2D1_RECT_F Rect = D2D1::RectF(Margin, NextY, Margin + PanelWidth, NextY + GPUPanelHeight);
+
+		DrawTextBlock(
+			D2dCtx, Dwrite, Buf, Rect, 16.0f,
+			D2D1::ColorF(0, 0, 0, 0.6f),
+			D2D1::ColorF(D2D1::ColorF::Orange));
+
+		NextY += GPUPanelHeight + Space;
+	}
+
+	if (bShowSkinning && GPUTimer)
+	{
+		const ESkinningMode SkinningMode = GWorld->GetRenderSettings().GetSkinningMode();
+
+		const FTimeProfile& CpuProfile = FScopeCycleCounter::GetTimeProfile("SKINNING_CPU_TASK");
+		double CpuSkinningTime = CpuProfile.Milliseconds;
+
+		double GpuSkinningTime = GPUTimer->GetTime("SKINNING_GPU_TASK");
+		GpuSkinningTime = std::max(GpuSkinningTime, 0.0);
+
+		wchar_t Buf[512];
+		swprintf_s(Buf, L"[Skinning Stats]\n"
+		   L"Mode: %s\n\n"
+		   L"--- Timings ---\n"
+		   L"SKINNING_CPU_TASK: %.4f ms\n"
+		   L"SKINNING_GPU_TASK: %.4f ms",
+		   (SkinningMode == ESkinningMode::GPU) ? L"GPU" : L"CPU",
+		   CpuSkinningTime,
+		   GpuSkinningTime
+		);
+
+		constexpr float SkinningPanelHeight = 130.0f;
+		D2D1_RECT_F rc = D2D1::RectF(Margin, NextY, Margin + PanelWidth, NextY + SkinningPanelHeight);
+
+		DrawTextBlock(
+		   D2dCtx, Dwrite, Buf, rc, 16.0f,
+		   D2D1::ColorF(0, 0, 0, 0.6f),
+		   D2D1::ColorF(D2D1::ColorF::LawnGreen));
+
+		NextY += SkinningPanelHeight + Space;
+	}
+
 	D2dCtx->EndDraw();
 	D2dCtx->SetTarget(nullptr);
 
 	FScopeCycleCounter::TimeProfileInit();
-
 
 	SafeRelease(TargetBmp);
 	SafeRelease(Dwrite);
@@ -387,74 +451,4 @@ void UStatsOverlayD2D::Draw()
 	SafeRelease(DxgiDevice);
 	SafeRelease(Surface);
 	SafeRelease(D2dFactory);
-}
-
-void UStatsOverlayD2D::SetShowFPS(bool b)
-{
-	bShowFPS = b;
-}
-
-void UStatsOverlayD2D::SetShowMemory(bool b)
-{
-	bShowMemory = b;
-}
-
-void UStatsOverlayD2D::SetShowPicking(bool b)
-{
-	bShowPicking = b;
-}
-
-void UStatsOverlayD2D::SetShowDecal(bool b)
-{
-	bShowDecal = b;
-}
-
-void UStatsOverlayD2D::ToggleFPS()
-{
-	bShowFPS = !bShowFPS;
-}
-
-void UStatsOverlayD2D::ToggleMemory()
-{
-	bShowMemory = !bShowMemory;
-}
-
-void UStatsOverlayD2D::TogglePicking()
-{
-	bShowPicking = !bShowPicking;
-}
-
-void UStatsOverlayD2D::ToggleDecal()
-{
-	bShowDecal = !bShowDecal;
-}
-
-void UStatsOverlayD2D::SetShowTileCulling(bool b)
-{
-	bShowTileCulling = b;
-}
-
-void UStatsOverlayD2D::ToggleTileCulling()
-{
-	bShowTileCulling = !bShowTileCulling;
-}
-
-void UStatsOverlayD2D::SetShowLights(bool b)
-{
-	bShowLights = b;
-}
-
-void UStatsOverlayD2D::ToggleLights()
-{
-	bShowLights = !bShowLights;
-}
-
-void UStatsOverlayD2D::SetShowShadow(bool b)
-{
-	bShowShadow = b;
-}
-
-void UStatsOverlayD2D::ToggleShadow()
-{
-	bShowShadow = !bShowShadow;
 }
