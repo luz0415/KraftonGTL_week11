@@ -1345,7 +1345,7 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
                 else
                 {
                     // 일시정지 중이면 재생 (정방향, 일시정지 위치에서 시작)
-                    ActiveState->PlaybackSpeed = std::abs(ActiveState->PlaybackSpeed);
+                    ActiveState->PlaybackSpeed = FMath::Abs(ActiveState->PlaybackSpeed);
                     AnimInst->SetPlayRate(ActiveState->PlaybackSpeed);
 
                     // 현재 애니메이션이 설정되지 않았을 때만 PlayAnimation 호출
@@ -1391,7 +1391,7 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
             ActiveState->CurrentAnimationTime = AnimInst->GetCurrentTime();
 
             // PlaybackSpeed가 변경되었으면 AnimInstance에 반영
-            if (std::abs(AnimInst->GetPlayRate() - ActiveState->PlaybackSpeed) > 0.001f)
+            if (FMath::Abs(AnimInst->GetPlayRate() - ActiveState->PlaybackSpeed) > 0.001f)
             {
                 AnimInst->SetPlayRate(ActiveState->PlaybackSpeed);
             }
@@ -1411,6 +1411,18 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
 
         SkelComp->SetTickEnabled(bShouldTick);
+
+        // 애니메이션 업데이트 후, 에디터에서 편집된 본 트랜스폼 재적용
+        // (0c3c88a 커밋 이전에 UpdateBonesFromAnimation에서 수행하던 로직)
+        if (ActiveState->ViewMode == EViewerMode::Animation && !ActiveState->EditedBoneTransforms.empty())
+        {
+            for (const auto& Pair : ActiveState->EditedBoneTransforms)
+            {
+                int32 BoneIndex = Pair.first;
+                const FTransform& EditedTransform = Pair.second;
+                SkelComp->SetBoneLocalTransform(BoneIndex, EditedTransform);
+            }
+        }
     }
 }
 
@@ -1701,4 +1713,3 @@ void SSkeletalMeshViewerWindow::ExpandToSelectedBone(ViewerState* State, int32 B
         CurrentIndex = Skeleton->Bones[CurrentIndex].ParentIndex;
     }
 }
-

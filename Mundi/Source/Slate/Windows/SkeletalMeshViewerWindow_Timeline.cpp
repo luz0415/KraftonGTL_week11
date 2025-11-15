@@ -123,7 +123,17 @@ void SSkeletalMeshViewerWindow::RenderTimelineControls(ViewerState* State)
     // Play/Pause (AnimInstance 컨트롤)
     if (State->bIsPlaying)
     {
+        bool bPauseClicked = false;
         if (IconPause && IconPause->GetShaderResourceView())
+        {
+            bPauseClicked = ImGui::ImageButton("##Pause", IconPause->GetShaderResourceView(), ButtonSizeVec);
+        }
+        else
+        {
+            bPauseClicked = ImGui::Button("||", ButtonSizeVec);
+        }
+
+        if (bPauseClicked)
         {
             if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
             {
@@ -131,21 +141,11 @@ void SSkeletalMeshViewerWindow::RenderTimelineControls(ViewerState* State)
                 if (AnimInst)
                 {
                     AnimInst->StopAnimation();
-                    State->bIsPlaying = false;
                 }
             }
-            if (ImGui::ImageButton("##Pause", IconPause->GetShaderResourceView(), ButtonSizeVec))
-            {
-                State->bIsPlaying = false;
-            }
+            State->bIsPlaying = false;
         }
-        else
-        {
-            if (ImGui::Button("||", ButtonSizeVec))
-            {
-                State->bIsPlaying = false;
-            }
-        }
+
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip("Pause");
@@ -251,29 +251,6 @@ void SSkeletalMeshViewerWindow::RenderTimelineControls(ViewerState* State)
 
     ImGui::SameLine();
 
-    // Timeline 슬라이더
-    ImGui::SetNextItemWidth(200.0f);
-    float PrevTime = State->CurrentAnimationTime;
-    if (ImGui::SliderFloat("##Timeline", &State->CurrentAnimationTime, 0.0f, MaxTime, "%.2fs"))
-    {
-        // 슬라이더가 변경되면 AnimInstance에 시간 설정
-        if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
-        {
-            UAnimInstance* AnimInst = State->PreviewActor->GetSkeletalMeshComponent()->GetAnimInstance();
-            if (AnimInst)
-            {
-                AnimInst->SetPosition(State->CurrentAnimationTime);
-            }
-        }
-    }
-
-    ImGui::SameLine();
-
-    // 시간 표시
-    ImGui::Text("%.2f / %.2f s", State->CurrentAnimationTime, MaxTime);
-
-    ImGui::SameLine();
-
     // 재생 속도
     ImGui::Text("Speed:");
     ImGui::SameLine();
@@ -282,7 +259,7 @@ void SSkeletalMeshViewerWindow::RenderTimelineControls(ViewerState* State)
 
     ImGui::PopStyleVar(2);
 
-    // 새로운 타임라인 렌더링
+    // 커스텀 타임라인 렌더링 (시간 표시 + 슬라이더 기능 포함)
     RenderTimeline(State);
 }
 
@@ -361,7 +338,7 @@ void SSkeletalMeshViewerWindow::TimelineReverse(ViewerState* State)
     }
 
     // 역재생 (음수 속도) - AnimInstance를 통해 설정
-    State->PlaybackSpeed = -std::abs(State->PlaybackSpeed);
+    State->PlaybackSpeed = -FMath::Abs(State->PlaybackSpeed);
 
     if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
     {
@@ -385,8 +362,6 @@ void SSkeletalMeshViewerWindow::TimelineReverse(ViewerState* State)
             State->bIsPlaying = true;
         }
     }
-    State->PlaybackSpeed = -FMath::Abs(State->PlaybackSpeed);
-    State->bIsPlaying = true;
 }
 
 void SSkeletalMeshViewerWindow::TimelineRecord(ViewerState* State)
@@ -402,7 +377,7 @@ void SSkeletalMeshViewerWindow::TimelinePlay(ViewerState* State)
     }
 
     // 정방향 재생 - AnimInstance를 통해 설정
-    State->PlaybackSpeed = std::abs(State->PlaybackSpeed);
+    State->PlaybackSpeed = FMath::Abs(State->PlaybackSpeed);
 
     if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
     {
@@ -426,8 +401,6 @@ void SSkeletalMeshViewerWindow::TimelinePlay(ViewerState* State)
             State->bIsPlaying = true;
         }
     }
-    State->PlaybackSpeed = FMath::Abs(State->PlaybackSpeed);
-    State->bIsPlaying = true;
 }
 
 void SSkeletalMeshViewerWindow::TimelineToNext(ViewerState* State)
@@ -488,9 +461,9 @@ void SSkeletalMeshViewerWindow::RenderTimeline(ViewerState* State)
 
     float MaxTime = DataModel->GetPlayLength();
 
-    // 타임라인 영역 크기 설정
-    float TimelineHeight = 60.0f;
-    ImVec2 TimelineSize = ImVec2(ImGui::GetContentRegionAvail().x, TimelineHeight);
+    // 타임라인 영역 크기 설정 (남은 전체 높이 사용)
+    ImVec2 ContentAvail = ImGui::GetContentRegionAvail();
+    ImVec2 TimelineSize = ImVec2(ContentAvail.x, ContentAvail.y);
 
     ImVec2 CursorPos = ImGui::GetCursorScreenPos();
     ImVec2 TimelineMin = CursorPos;
