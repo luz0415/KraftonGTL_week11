@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "Source/Runtime/Engine/Animation/Public/AnimInstance.h"
-
+#include "AnimInstance.h"
 #include "SkeletalMeshComponent.h"
-#include "Source/Runtime/Engine/Animation/Public/AnimSequenceBase.h"
+#include "AnimSequenceBase.h"
+#include "AnimationTypes.h"
 
 IMPLEMENT_CLASS(UAnimInstance)
 

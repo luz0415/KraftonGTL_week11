@@ -2,6 +2,9 @@
 #include "Object.h"
 #include "fbxsdk.h"
 
+class UAnimSequence;
+class UAnimDataModel;
+
 class UFbxLoader : public UObject
 {
 public:
@@ -15,6 +18,12 @@ public:
 	USkeletalMesh* LoadFbxMesh(const FString& FilePath);
 
 	FSkeletalMeshData* LoadFbxMeshAsset(const FString& FilePath);
+
+	// 애니메이션 임포트
+	UAnimSequence* LoadFbxAnimation(const FString& FilePath, const FSkeleton& TargetSkeleton, const FString& AnimStackName = "");
+
+	// With Skin FBX에서 Skeleton 추출 (호환성 체크용)
+	FSkeleton* ExtractSkeletonFromFbx(const FString& FilePath);
 
 
 protected:
@@ -39,6 +48,21 @@ private:
 	FbxString GetAttributeTypeName(FbxNodeAttribute* InAttribute);
 
 	void EnsureSingleRootBone(FSkeletalMeshData& MeshData);
+
+	// 애니메이션 임포트 헬퍼 메서드
+	void ExtractBoneAnimation(
+		FbxNode* BoneNode,
+		FbxAnimLayer* AnimLayer,
+		const FbxTimeSpan& TimeSpan,
+		double FrameRate,
+		struct FBoneAnimationTrack& OutTrack
+	);
+
+	FVector SamplePosition(FbxNode* Node, FbxAnimLayer* Layer, FbxTime Time);
+	FQuat SampleRotation(FbxNode* Node, FbxAnimLayer* Layer, FbxTime Time);
+	FVector SampleScale(FbxNode* Node, FbxAnimLayer* Layer, FbxTime Time);
+
+	FbxNode* FindNodeByName(FbxNode* RootNode, const char* NodeName);
 
 	// bin파일 저장용
 	TArray<FMaterialInfo> MaterialInfos;

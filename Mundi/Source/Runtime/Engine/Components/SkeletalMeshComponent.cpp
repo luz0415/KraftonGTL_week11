@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "SkeletalMeshComponent.h"
-#include "Source/Runtime/Engine/Animation/Public/AnimInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimInstance.h"
 
 USkeletalMeshComponent::USkeletalMeshComponent()
     : AnimInstance(nullptr)

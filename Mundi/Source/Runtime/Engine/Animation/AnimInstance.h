@@ -1,7 +1,9 @@
 #pragma once
+#include "Object.h"
 
 class UAnimSequenceBase;
 class USkeletalMeshComponent;
+struct FAnimNotifyEvent;
 
 /**
  * @brief Animation 인스턴스
@@ -15,8 +17,7 @@ class USkeletalMeshComponent;
  * @param bIsPlaying 재생 중인지 여부
  */
 UCLASS()
-class UAnimInstance :
-	public UObject
+class UAnimInstance : public UObject
 {
 	DECLARE_CLASS(UAnimInstance, UObject)
 

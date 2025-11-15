@@ -1,13 +1,19 @@
 #include "pch.h"
-#include "Source/Runtime/Engine/Animation/Public/AnimSequenceBase.h"
-#include "Source/Runtime/Engine/Animation/Public/AnimTypes.h"
+#include "AnimSequenceBase.h"
+#include "AnimDataModel.h"
+#include "AnimationTypes.h"
 
 IMPLEMENT_CLASS(UAnimSequenceBase)
 
 UAnimSequenceBase::UAnimSequenceBase()
-	: SequenceLength(0.0f)
-	  , RateScale(1.0f)
-	  , bLoop(true)
+	: DataModel(nullptr)
+	, SequenceLength(0.0f)
+	, RateScale(1.0f)
+	, bLoop(true)
+{
+}
+
+UAnimSequenceBase::~UAnimSequenceBase()
 {
 }
 

@@ -11,6 +11,11 @@
 #include "BoneAnchorComponent.h"
 #include "Source/Runtime/Engine/Collision/Picking.h"
 #include "Source/Runtime/Engine/GameFramework/CameraActor.h"
+#include "Source/Editor/FBXLoader.h"
+#include "Source/Runtime/Engine/Animation/AnimSequence.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Runtime/Engine/Animation/AnimDataModel.h"
+#include <cmath> // for fmod
 
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
 {
@@ -33,7 +38,7 @@ bool SSkeletalMeshViewerWindow::Initialize(float StartX, float StartY, float Wid
 {
     World = InWorld;
     Device = InDevice;
-    
+
     SetRect(StartX, StartY, StartX + Width, StartY + Height);
 
     // Create first tab/state
@@ -237,6 +242,313 @@ void SSkeletalMeshViewerWindow::OnRender()
             ImGui::PopStyleColor();
             ImGui::Spacing();
 
+            // Animation Import Section
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.25f, 0.35f, 0.50f, 0.8f));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4);
+            ImGui::Indent(8.0f);
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+            ImGui::Text("Animation Import");
+            ImGui::PopFont();
+            ImGui::Unindent(8.0f);
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            ImGui::BeginGroup();
+            ImGui::Text("Animation Path:");
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::InputTextWithHint("##AnimPath", "Browse for animation FBX...", ActiveState->AnimPathBuffer, sizeof(ActiveState->AnimPathBuffer));
+            ImGui::PopItemWidth();
+
+            ImGui::Spacing();
+
+            // Skeleton Selection ComboBox (선택사항 - Without Skin 전용)
+            ImGui::Text("Target Skeleton (Optional):");
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("Required for Without Skin FBX.");
+                ImGui::Text("Optional for With Skin FBX (auto-detected).");
+                ImGui::EndTooltip();
+            }
+
+            TArray<USkeletalMesh*> AllSkeletalMeshes = UResourceManager::GetInstance().GetAll<USkeletalMesh>();
+
+            FString PreviewValueStr = "Auto-detect or Select...";
+            if (ActiveState->SelectedSkeletonMesh)
+            {
+                const FSkeleton* Skeleton = ActiveState->SelectedSkeletonMesh->GetSkeleton();
+                if (Skeleton)
+                {
+                    // Skeleton Name이 비어있으면 파일명 사용
+                    if (!Skeleton->Name.empty())
+                    {
+                        PreviewValueStr = Skeleton->Name;
+                    }
+                    else
+                    {
+                        PreviewValueStr = ActiveState->SelectedSkeletonMesh->GetFilePath();
+                    }
+                }
+            }
+
+            ImGui::PushItemWidth(-1.0f);
+            if (ImGui::BeginCombo("##SkeletonCombo", PreviewValueStr.c_str()))
+            {
+                // "None" 옵션 추가 (With Skin의 경우)
+                bool bNoneSelected = (ActiveState->SelectedSkeletonMesh == nullptr);
+                if (ImGui::Selectable("Auto-detect (With Skin)", bNoneSelected))
+                {
+                    ActiveState->SelectedSkeletonIndex = -1;
+                    ActiveState->SelectedSkeletonMesh = nullptr;
+                }
+
+                for (int32 i = 0; i < AllSkeletalMeshes.Num(); ++i)
+                {
+                    USkeletalMesh* Mesh = AllSkeletalMeshes[i];
+                    const FSkeleton* Skeleton = Mesh->GetSkeleton();
+                    if (Skeleton)
+                    {
+                        bool bIsSelected = (ActiveState->SelectedSkeletonMesh == Mesh);
+
+                        // 레이블 생성: Skeleton 이름이 있으면 사용, 없으면 파일명 사용
+                        FString Label;
+                        if (!Skeleton->Name.empty())
+                        {
+                            Label = Skeleton->Name;
+                        }
+                        else
+                        {
+                            Label = Mesh->GetFilePath();
+                        }
+
+                        if (ImGui::Selectable(Label.c_str(), bIsSelected))
+                        {
+                            ActiveState->SelectedSkeletonIndex = i;
+                            ActiveState->SelectedSkeletonMesh = Mesh;
+
+                            // 선택된 SkeletalMesh 로드
+                            if (ActiveState->PreviewActor)
+                            {
+                                USkeletalMeshComponent* Component = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+                                if (Component)
+                                {
+                                    Component->SetSkeletalMesh(Mesh->GetFilePath());
+                                    UE_LOG("Loaded SkeletalMesh: %s", Mesh->GetFilePath().c_str());
+
+                                    // 애니메이션 리스트도 업데이트 (첫 번째 애니메이션 자동 선택)
+                                    const TArray<UAnimSequence*>& Animations = Mesh->GetAnimations();
+                                    if (Animations.Num() > 0)
+                                    {
+                                        ActiveState->SelectedAnimationIndex = 0;
+                                        ActiveState->CurrentAnimation = Animations[0];
+                                        ActiveState->bIsPlaying = true;
+                                        ActiveState->CurrentAnimationTime = 0.0f;
+                                        UE_LOG("Auto-selected first animation (%d total animations)", Animations.Num());
+                                    }
+                                    else
+                                    {
+                                        ActiveState->SelectedAnimationIndex = -1;
+                                        ActiveState->CurrentAnimation = nullptr;
+                                        ActiveState->bIsPlaying = false;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (bIsSelected)
+                        {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::PopItemWidth();
+
+            ImGui::Spacing();
+
+            // Import Buttons
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.28f, 0.40f, 0.55f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.50f, 0.70f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.25f, 0.35f, 0.50f, 1.0f));
+
+            float animButtonWidth = (leftWidth - 24.0f) * 0.5f - 4.0f;
+            if (ImGui::Button("Browse Anim...", ImVec2(animButtonWidth, 32)))
+            {
+                auto widePath = FPlatformProcess::OpenLoadFileDialog(UTF8ToWide(GDataDir), L"fbx", L"FBX Files");
+                if (!widePath.empty())
+                {
+                    std::string s = widePath.string();
+                    strncpy_s(ActiveState->AnimPathBuffer, s.c_str(), sizeof(ActiveState->AnimPathBuffer) - 1);
+                }
+            }
+
+            ImGui::SameLine();
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.60f, 0.40f, 0.20f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.70f, 0.50f, 0.30f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.30f, 0.15f, 1.0f));
+
+            // 경로만 있으면 Import 가능 (With Skin은 auto-detect, Without Skin은 Skeleton 필요)
+            bool bCanImport = strlen(ActiveState->AnimPathBuffer) > 0;
+            if (!bCanImport)
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+            }
+
+            if (ImGui::Button("Import Anim", ImVec2(animButtonWidth, 32)) && bCanImport)
+            {
+                FString AnimPath = ActiveState->AnimPathBuffer;
+
+                // 1. FBX에서 Skeleton 추출 (With Skin인지 확인)
+                FSkeleton* FbxSkeleton = UFbxLoader::GetInstance().ExtractSkeletonFromFbx(AnimPath);
+
+                if (FbxSkeleton)
+                {
+                    // With Skin FBX - Skeleton이 포함됨
+                    UE_LOG("Detected With Skin FBX. Checking skeleton compatibility...");
+
+                    // 기존 SkeletalMesh들과 호환성 체크
+                    TArray<USkeletalMesh*> AllSkeletalMeshes = UResourceManager::GetInstance().GetAll<USkeletalMesh>();
+                    USkeletalMesh* CompatibleMesh = nullptr;
+
+                    for (USkeletalMesh* Mesh : AllSkeletalMeshes)
+                    {
+                        const FSkeleton* ExistingSkeleton = Mesh->GetSkeleton();
+                        if (ExistingSkeleton && ExistingSkeleton->IsCompatibleWith(*FbxSkeleton))
+                        {
+                            CompatibleMesh = Mesh;
+                            UE_LOG("Found compatible skeleton: %s", ExistingSkeleton->Name.c_str());
+                            break;
+                        }
+                    }
+
+                    if (CompatibleMesh)
+                    {
+                        // 호환되는 Skeleton이 있음 - Animation만 추출
+                        const FSkeleton* TargetSkeleton = CompatibleMesh->GetSkeleton();
+                        UAnimSequence* AnimSequence = UFbxLoader::GetInstance().LoadFbxAnimation(
+                            AnimPath,
+                            *TargetSkeleton,
+                            ""
+                        );
+
+                        if (AnimSequence)
+                        {
+                            // 호환되는 모든 SkeletalMesh에 Animation 추가
+                            int32 AddedCount = 0;
+                            for (USkeletalMesh* Mesh : AllSkeletalMeshes)
+                            {
+                                const FSkeleton* ExistingSkeleton = Mesh->GetSkeleton();
+                                if (ExistingSkeleton && ExistingSkeleton->IsCompatibleWith(*FbxSkeleton))
+                                {
+                                    Mesh->AddAnimation(AnimSequence);
+                                    UE_LOG("  [+] Added animation to mesh: %s", Mesh->GetFilePath().c_str());
+                                    AddedCount++;
+                                }
+                            }
+
+                            if (UAnimDataModel* DataModel = AnimSequence->GetDataModel())
+                            {
+                                UE_LOG("========================================");
+                                UE_LOG("Animation Imported Successfully (With Skin - Animation Only)");
+                                UE_LOG("  File: %s", AnimPath.c_str());
+                                UE_LOG("  Duration: %.2f seconds", DataModel->GetPlayLength());
+                                UE_LOG("  Frame Rate: %d FPS", DataModel->GetFrameRate().Numerator);
+                                UE_LOG("  Total Frames: %d", DataModel->GetNumberOfFrames());
+                                UE_LOG("  Bone Tracks: %d", DataModel->GetBoneAnimationTracks().Num());
+                                UE_LOG("  Applied to %d compatible SkeletalMesh(es)", AddedCount);
+                                UE_LOG("========================================");
+                            }
+                        }
+                        else
+                        {
+                            UE_LOG("ERROR: Failed to import animation: %s", AnimPath.c_str());
+                        }
+                    }
+                    else
+                    {
+                        // 호환되는 Skeleton이 없음 - 새로운 SkeletalMesh로 로드
+                        UE_LOG("No compatible skeleton found. Importing as new SkeletalMesh...");
+                        USkeletalMesh* NewMesh = UFbxLoader::GetInstance().LoadFbxMesh(AnimPath);
+                        if (NewMesh)
+                        {
+                            UE_LOG("Imported new SkeletalMesh with animation: %s", AnimPath.c_str());
+                        }
+                        else
+                        {
+                            UE_LOG("Failed to import SkeletalMesh: %s", AnimPath.c_str());
+                        }
+                    }
+
+                    delete FbxSkeleton;
+                }
+                else
+                {
+                    // Without Skin FBX - Skeleton이 없음, 선택한 Skeleton 사용
+                    UE_LOG("Detected Without Skin FBX. Using selected skeleton...");
+
+                    if (!ActiveState->SelectedSkeletonMesh)
+                    {
+                        UE_LOG("ERROR: Without Skin FBX requires a target skeleton to be selected!");
+                        // TODO: UI에 에러 메시지 표시
+                    }
+                    else
+                    {
+                        const FSkeleton* TargetSkeleton = ActiveState->SelectedSkeletonMesh->GetSkeleton();
+                        if (TargetSkeleton)
+                        {
+                            UAnimSequence* AnimSequence = UFbxLoader::GetInstance().LoadFbxAnimation(
+                                AnimPath,
+                                *TargetSkeleton,
+                                ""
+                            );
+
+                            if (AnimSequence)
+                            {
+                                ActiveState->SelectedSkeletonMesh->AddAnimation(AnimSequence);
+
+                                UAnimDataModel* DataModel = AnimSequence->GetDataModel();
+                                if (DataModel)
+                                {
+                                    UE_LOG("========================================");
+                                    UE_LOG("Animation Imported Successfully (Without Skin)");
+                                    UE_LOG("  File: %s", AnimPath.c_str());
+                                    UE_LOG("  Duration: %.2f seconds", DataModel->GetPlayLength());
+                                    UE_LOG("  Frame Rate: %d FPS", DataModel->GetFrameRate().Numerator);
+                                    UE_LOG("  Total Frames: %d", DataModel->GetNumberOfFrames());
+                                    UE_LOG("  Bone Tracks: %d", DataModel->GetBoneAnimationTracks().Num());
+                                    UE_LOG("  Target Skeleton: %s", TargetSkeleton->Name.c_str());
+                                    UE_LOG("  Total Animations on this mesh: %d", ActiveState->SelectedSkeletonMesh->GetAnimations().Num());
+                                    UE_LOG("========================================");
+                                }
+                            }
+                            else
+                            {
+                                UE_LOG("ERROR: Failed to import animation: %s", AnimPath.c_str());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!bCanImport)
+            {
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::PopStyleColor(6);
+            ImGui::EndGroup();
+
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.35f, 0.45f, 0.60f, 0.7f));
+            ImGui::Separator();
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+
             // Bone Hierarchy Section
             ImGui::Text("Bone Hierarchy:");
             ImGui::Spacing();
@@ -276,18 +588,18 @@ void SSkeletalMeshViewerWindow::OnRender()
                     {
                         const bool bLeaf = Children[Index].IsEmpty();
                         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth;
-                        
+
                         if (bLeaf)
                         {
                             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         }
-                        
+
                         // 펼쳐진 노드는 명시적으로 열린 상태로 설정
                         if (ActiveState->ExpandedBoneIndices.count(Index) > 0)
                         {
                             ImGui::SetNextItemOpen(true);
                         }
-                        
+
                         if (ActiveState->SelectedBoneIndex == Index)
                         {
                             flags |= ImGuiTreeNodeFlags_Selected;
@@ -308,7 +620,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                         if (ActiveState->SelectedBoneIndex == Index)
                         {
                             ImGui::PopStyleColor(3);
-                            
+
                             // 선택된 본까지 스크롤
                             ImGui::SetScrollHereY(0.5f);
                         }
@@ -328,7 +640,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             {
                                 ActiveState->SelectedBoneIndex = Index;
                                 ActiveState->bBoneLinesDirty = true;
-                                
+
                                 ExpandToSelectedBone(ActiveState, Index);
 
                                 if (ActiveState->PreviewActor && ActiveState->World)
@@ -342,7 +654,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 }
                             }
                         }
-                        
+
                         if (!bLeaf && open)
                         {
                             for (int32 Child : Children[Index])
@@ -520,6 +832,112 @@ void SSkeletalMeshViewerWindow::OnRender()
             ImGui::PopStyleColor();
         }
 
+        // Animation Section
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.35f, 0.45f, 0.60f, 0.7f));
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.25f, 0.35f, 0.50f, 0.8f));
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4);
+        ImGui::Indent(8.0f);
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+        ImGui::Text("Animations");
+        ImGui::PopFont();
+        ImGui::Unindent(8.0f);
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+
+        if (ActiveState->CurrentMesh)
+        {
+            const TArray<UAnimSequence*>& Animations = ActiveState->CurrentMesh->GetAnimations();
+
+            if (Animations.Num() > 0)
+            {
+                // Animation List
+                ImGui::Text("Animation List:");
+                ImGui::BeginChild("AnimationList", ImVec2(0, 150), true);
+
+                for (int32 i = 0; i < Animations.Num(); ++i)
+                {
+                    UAnimSequence* Anim = Animations[i];
+                    if (!Anim) continue;
+
+                    UAnimDataModel* DataModel = Anim->GetDataModel();
+                    if (!DataModel) continue;
+
+                    bool bIsSelected = (ActiveState->SelectedAnimationIndex == i);
+                    char LabelBuffer[128];
+                    snprintf(LabelBuffer, sizeof(LabelBuffer), "Anim %d (%.1fs)", i, DataModel->GetPlayLength());
+                    FString Label = LabelBuffer;
+
+                    if (ImGui::Selectable(Label.c_str(), bIsSelected))
+                    {
+                        ActiveState->SelectedAnimationIndex = i;
+                        ActiveState->CurrentAnimation = Anim;
+                        ActiveState->CurrentAnimationTime = 0.0f;
+                        // 자동 재생
+                        ActiveState->bIsPlaying = true;
+                    }
+                }
+
+                ImGui::EndChild();
+
+                // Playback Controls
+                if (ActiveState->CurrentAnimation)
+                {
+                    UAnimDataModel* DataModel = ActiveState->CurrentAnimation->GetDataModel();
+
+                    ImGui::Spacing();
+                    ImGui::Text("Playback:");
+
+                    // Play/Pause/Stop buttons
+                    if (ActiveState->bIsPlaying)
+                    {
+                        if (ImGui::Button("Pause", ImVec2(80, 25)))
+                        {
+                            ActiveState->bIsPlaying = false;
+                        }
+                    }
+                    else
+                    {
+                        if (ImGui::Button("Play", ImVec2(80, 25)))
+                        {
+                            ActiveState->bIsPlaying = true;
+                        }
+                    }
+
+                    ImGui::SameLine();
+                    if (ImGui::Button("Stop", ImVec2(80, 25)))
+                    {
+                        ActiveState->bIsPlaying = false;
+                        ActiveState->CurrentAnimationTime = 0.0f;
+                    }
+
+                    // Timeline Slider
+                    ImGui::Spacing();
+                    float MaxTime = DataModel->GetPlayLength();
+                    ImGui::Text("Time: %.2f / %.2f s", ActiveState->CurrentAnimationTime, MaxTime);
+                    ImGui::SliderFloat("##Timeline", &ActiveState->CurrentAnimationTime, 0.0f, MaxTime, "%.2f");
+
+                    // Playback Speed
+                    ImGui::Text("Speed:");
+                    ImGui::SliderFloat("##PlaybackSpeed", &ActiveState->PlaybackSpeed, 0.1f, 3.0f, "%.1fx");
+
+                    // Loop checkbox
+                    ImGui::Checkbox("Loop", &ActiveState->bLoopAnimation);
+                }
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+                ImGui::TextWrapped("No animations imported. Use the Animation Import section to import FBX animations.");
+                ImGui::PopStyleColor();
+            }
+        }
+
         ImGui::EndChild(); // RightPanel
 
         // Pop the ItemSpacing style
@@ -559,6 +977,37 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
     if (ActiveState && ActiveState->Client)
     {
         ActiveState->Client->Tick(DeltaSeconds);
+    }
+
+    // Animation Update
+    if (ActiveState->bIsPlaying && ActiveState->CurrentAnimation)
+    {
+        UAnimDataModel* DataModel = ActiveState->CurrentAnimation->GetDataModel();
+        if (DataModel)
+        {
+            // 시간 업데이트
+            ActiveState->CurrentAnimationTime += DeltaSeconds * ActiveState->PlaybackSpeed;
+
+            float PlayLength = DataModel->GetPlayLength();
+
+            // 루프 처리
+            if (ActiveState->CurrentAnimationTime >= PlayLength)
+            {
+                if (ActiveState->bLoopAnimation)
+                {
+                    // fmod는 double, fmodf는 float
+                    ActiveState->CurrentAnimationTime = static_cast<float>(fmod(static_cast<double>(ActiveState->CurrentAnimationTime), static_cast<double>(PlayLength)));
+                }
+                else
+                {
+                    ActiveState->CurrentAnimationTime = PlayLength;
+                    ActiveState->bIsPlaying = false; // 재생 중지
+                }
+            }
+
+            // Bone Transform 업데이트
+            UpdateBonesFromAnimation(ActiveState);
+        }
     }
 }
 
@@ -765,7 +1214,7 @@ void SSkeletalMeshViewerWindow::UpdateBoneTransformFromSkeleton(ViewerState* Sta
 {
     if (!State || !State->CurrentMesh || State->SelectedBoneIndex < 0)
         return;
-        
+
     // 본의 로컬 트랜스폼에서 값 추출
     const FTransform& BoneTransform = State->PreviewActor->GetSkeletalMeshComponent()->GetBoneLocalTransform(State->SelectedBoneIndex);
     State->EditBoneLocation = BoneTransform.Translation;
@@ -786,11 +1235,11 @@ void SSkeletalMeshViewerWindow::ExpandToSelectedBone(ViewerState* State, int32 B
 {
     if (!State || !State->CurrentMesh)
         return;
-        
+
     const FSkeleton* Skeleton = State->CurrentMesh->GetSkeleton();
     if (!Skeleton || BoneIndex < 0 || BoneIndex >= Skeleton->Bones.size())
         return;
-    
+
     // 선택된 본부터 루트까지 모든 부모를 펼침
     int32 CurrentIndex = BoneIndex;
     while (CurrentIndex >= 0)
@@ -798,4 +1247,59 @@ void SSkeletalMeshViewerWindow::ExpandToSelectedBone(ViewerState* State, int32 B
         State->ExpandedBoneIndices.insert(CurrentIndex);
         CurrentIndex = Skeleton->Bones[CurrentIndex].ParentIndex;
     }
+}
+
+void SSkeletalMeshViewerWindow::UpdateBonesFromAnimation(ViewerState* State)
+{
+    if (!State || !State->CurrentAnimation || !State->PreviewActor)
+        return;
+
+    UAnimDataModel* DataModel = State->CurrentAnimation->GetDataModel();
+    if (!DataModel)
+        return;
+
+    const FSkeleton* Skeleton = State->CurrentMesh->GetSkeleton();
+    if (!Skeleton)
+        return;
+
+    static bool bFirstUpdate = true;
+    int32 UpdatedBones = 0;
+
+    // 현재 시간에서 각 본의 Transform 샘플링
+    for (int32 BoneIndex = 0; BoneIndex < Skeleton->Bones.Num(); ++BoneIndex)
+    {
+        const FBone& Bone = Skeleton->Bones[BoneIndex];
+
+        FVector Position;
+        FQuat Rotation;
+        FVector Scale;
+
+        // Animation에서 본 Transform 가져오기
+        if (State->CurrentAnimation->GetBoneTransformAtTime(Bone.Name, State->CurrentAnimationTime, Position, Rotation, Scale))
+        {
+            // 첫 업데이트시 디버그 로그
+            if (bFirstUpdate && BoneIndex < 3)
+            {
+                UE_LOG("UpdateBonesFromAnimation: Bone[%d] '%s' - Pos(%.2f,%.2f,%.2f) Rot(%.2f,%.2f,%.2f,%.2f) Scale(%.2f,%.2f,%.2f)",
+                    BoneIndex, Bone.Name.c_str(),
+                    Position.X, Position.Y, Position.Z,
+                    Rotation.X, Rotation.Y, Rotation.Z, Rotation.W,
+                    Scale.X, Scale.Y, Scale.Z);
+            }
+
+            // SkeletalMeshComponent에 적용
+            FTransform BoneTransform(Position, Rotation, Scale);
+            State->PreviewActor->GetSkeletalMeshComponent()->SetBoneLocalTransform(BoneIndex, BoneTransform);
+            UpdatedBones++;
+        }
+    }
+
+    if (bFirstUpdate)
+    {
+        UE_LOG("UpdateBonesFromAnimation: Updated %d / %d bones at time %.2f", UpdatedBones, Skeleton->Bones.Num(), State->CurrentAnimationTime);
+        bFirstUpdate = false;
+    }
+
+    // Bone lines dirty 플래그 설정 (본 위치가 변경되었으므로 라인 재구성 필요)
+    State->bBoneLinesDirty = true;
 }

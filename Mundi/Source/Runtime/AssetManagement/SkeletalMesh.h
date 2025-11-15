@@ -1,5 +1,7 @@
-﻿#pragma once
+#pragma once
 #include "ResourceBase.h"
+
+class UAnimSequence;
 
 class USkeletalMesh : public UResourceBase
 {
@@ -15,6 +17,13 @@ public:
     const FString& GetPathFileName() const { static const FString EmptyString; if (Data) return Data->PathFileName; return EmptyString; }
     const FSkeleton* GetSkeleton() const { return Data ? &Data->Skeleton : nullptr; }
     uint32 GetBoneCount() const { return Data ? Data->Skeleton.Bones.Num() : 0; }
+
+    // Animation 관리
+    void AddAnimation(UAnimSequence* Animation) { Animations.push_back(Animation); }
+    const TArray<UAnimSequence*>& GetAnimations() const { return Animations; }
+    void ClearAnimations() { Animations.clear(); }
+    
+    // ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer; } // W10 CPU Skinning이라 Component가 VB 소유
 
     ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer; } // GPU Skinning 때만 사용, CPU Skinning 시 Comp의 VB 사용
     ID3D11Buffer* GetIndexBuffer() const { return IndexBuffer; }
@@ -47,4 +56,7 @@ private:
 
     // CPU 리소스
     FSkeletalMeshData* Data = nullptr;
+
+    // Animations
+    TArray<UAnimSequence*> Animations;
 };
