@@ -54,6 +54,9 @@ public:
     bool bLoopAnimation = true;  // 루프 재생 여부
     float PlaybackSpeed = 1.0f;  // 재생 속도 배율
 
+    // 이 Viewer에서 임포트한 AnimSequence들 (메모리 관리용)
+    TArray<UAnimSequence*> ImportedAnimSequences;
+
     // View Mode
     EViewerMode ViewMode = EViewerMode::Skeletal;  // 기본값: Skeletal 모드
 };
