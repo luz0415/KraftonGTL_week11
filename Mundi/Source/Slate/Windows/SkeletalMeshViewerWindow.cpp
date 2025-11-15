@@ -82,6 +82,13 @@ void SSkeletalMeshViewerWindow::OnRender()
         return;
     }
 
+    // 탭이 없으면 렌더링하지 않음
+    if (Tabs.Num() == 0)
+    {
+        bIsOpen = false;
+        return;
+    }
+
     // Parent detachable window (movable, top-level) with solid background
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoSavedSettings;
 
@@ -101,6 +108,8 @@ void SSkeletalMeshViewerWindow::OnRender()
     {
         bViewerVisible = true;
         // Render tab bar and switch active state
+        int32 PreviousTabIndex = ActiveTabIndex;
+        bool bTabClosed = false;
         if (ImGui::BeginTabBar("SkeletalViewerTabs", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable))
         {
             for (int i = 0; i < Tabs.Num(); ++i)
@@ -116,6 +125,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                 if (!open)
                 {
                     CloseTab(i);
+                    bTabClosed = true;
                     break;
                 }
             }
@@ -125,6 +135,31 @@ void SSkeletalMeshViewerWindow::OnRender()
                 OpenNewTab(label);
             }
             ImGui::EndTabBar();
+        }
+
+        // 탭이 닫혔으면 즉시 종료 (댕글링 포인터 방지)
+        if (bTabClosed)
+        {
+            ImGui::End();
+            return;
+        }
+
+        // 탭 전환 시 애니메이션 자동 재생
+        if (ActiveState && PreviousTabIndex != ActiveTabIndex)
+        {
+            if (ActiveState->CurrentAnimation && ActiveState->PreviewActor)
+            {
+                USkeletalMeshComponent* SkelComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+                if (SkelComp)
+                {
+                    UAnimInstance* AnimInst = SkelComp->GetAnimInstance();
+                    if (AnimInst && !ActiveState->bIsPlaying)
+                    {
+                        AnimInst->PlayAnimation(ActiveState->CurrentAnimation, ActiveState->PlaybackSpeed);
+                        ActiveState->bIsPlaying = true;
+                    }
+                }
+            }
         }
         ImVec2 pos = ImGui::GetWindowPos();
         ImVec2 size = ImGui::GetWindowSize();
@@ -1200,7 +1235,10 @@ void SSkeletalMeshViewerWindow::OnRender()
             ImGui::PopStyleVar();
 
             // 타임라인 컨트롤 렌더링
-            RenderTimelineControls(ActiveState);
+            if (ActiveState)
+            {
+                RenderTimelineControls(ActiveState);
+            }
 
             ImGui::EndChild();
 
@@ -1595,16 +1633,10 @@ void SSkeletalMeshViewerWindow::CloseTab(int Index)
 {
     if (Index < 0 || Index >= Tabs.Num()) return;
 
-    // 마지막 탭이면 창 전체를 닫음
-    if (Tabs.Num() == 1)
-    {
-        bIsOpen = false;
-        return;
-    }
-
-    ViewerState* State = Tabs[Index];
-    SkeletalViewerBootstrap::DestroyViewerState(State);
+    // ViewerState 해제
+    SkeletalViewerBootstrap::DestroyViewerState(Tabs[Index]);
     Tabs.RemoveAt(Index);
+
     if (Tabs.Num() == 0)
     {
         ActiveTabIndex = -1;

@@ -271,16 +271,30 @@ void SSkeletalMeshViewerWindow::RefreshAnimationFrame(ViewerState* State)
         return;
     }
 
-    // 편집된 bone transform 캐시 초기화 (새 프레임의 애니메이션 포즈 적용)
-    State->EditedBoneTransforms.clear();
+    USkeletalMeshComponent* SkelComp = nullptr;
+    if (State->PreviewActor)
+    {
+        SkelComp = State->PreviewActor->GetSkeletalMeshComponent();
+    }
 
     // AnimInstance를 통해 포즈 업데이트 (EvaluateAnimation이 자동 호출됨)
-    if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+    if (SkelComp)
     {
-        UAnimInstance* AnimInst = State->PreviewActor->GetSkeletalMeshComponent()->GetAnimInstance();
+        UAnimInstance* AnimInst = SkelComp->GetAnimInstance();
         if (AnimInst)
         {
             AnimInst->SetPosition(State->CurrentAnimationTime);
+        }
+
+        // 애니메이션 업데이트 후, 편집된 본 트랜스폼 재적용
+        if (State->ViewMode == EViewerMode::Animation && !State->EditedBoneTransforms.empty())
+        {
+            for (const auto& Pair : State->EditedBoneTransforms)
+            {
+                int32 BoneIndex = Pair.first;
+                const FTransform& EditedTransform = Pair.second;
+                SkelComp->SetBoneLocalTransform(BoneIndex, EditedTransform);
+            }
         }
     }
 
