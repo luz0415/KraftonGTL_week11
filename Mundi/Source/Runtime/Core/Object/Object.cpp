@@ -1,5 +1,10 @@
 ﻿#include "pch.h"
 
+void UObject::DeleteObjectDirty()
+{
+	delete this;
+}
+
 FString UObject::GetName()
 {
     return ObjectName.ToString();
@@ -336,7 +341,7 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				SerializePrimitiveArray<FString>(ArrayPtr, bInIsLoading, ArrayJson);
 				break;
 			}
-			
+
 			case EPropertyType::Sound:
 			{
 				TArray<USound*>* ArrayPtr = Prop.GetValuePtr<TArray<USound*>>(this);

@@ -296,9 +296,9 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		for (const FString& cmd : HelpCommandList)
 			AddLog("- %s", cmd.c_str());
 	}
-	else if (Stricmp(command_line, "CAUSECRASH") == 0)
+	else if (Stricmp(command_line, "CRASH") == 0)
 	{
-		CauseCrashRandom();
+		CauseCrash();
 	}
 	else if (Stricmp(command_line, "HISTORY") == 0)
 	{
