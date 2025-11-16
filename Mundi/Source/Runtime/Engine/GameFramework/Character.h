@@ -13,6 +13,7 @@
 class UCharacterMovementComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
+class UCameraComponent;
 
 /**
  * ACharacter
@@ -169,12 +170,15 @@ public:
 	UCharacterMovementComponent* CharacterMovement;
 
 	/** SkeletalMesh 컴포넌트 (애니메이션 지원) */
-	UPROPERTY(EditAnywhere, Category = "[캐릭터]", Tooltip = "캐릭터의 스켈레탈메시컴포넌트를 지정합니다.")
+//	UPROPERTY(EditAnywhere, Category = "[캐릭터]", Tooltip = "캐릭터의 스켈레탈메시컴포넌트를 지정합니다.")
 	USkeletalMeshComponent* SkeletalMeshComponent;
 
 	/** Animation State Machine */
 	//UPROPERTY(EditAnywhere, Category = "[캐릭터]", Tooltip = "캐릭터의 AnimStateMachine.")
 	UAnimStateMachine* AnimStateMachine;
+
+	/** 카메라 컴포넌트 (3인칭 뷰) */
+	UCameraComponent* CameraComponent;
 
 	/** 웅크리기 상태 */
 	bool bIsCrouched;

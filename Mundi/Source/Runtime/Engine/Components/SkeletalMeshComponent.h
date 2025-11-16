@@ -34,6 +34,10 @@ public:
 	void SetSkeletalMesh(const FString& PathFileName) override;
 	void HandleAnimNotify(const FAnimNotifyEvent& Notify);
 
+	// Serialization
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void DuplicateSubObjects() override;
+
 	// Getters
 	UAnimInstance* GetAnimInstance() const { return AnimInstance; }
 	FTransform GetBoneLocalTransform(int32 BoneIndex) const;
@@ -72,6 +76,10 @@ public:
 	 * @brief State Machine 가져오기
 	 */
 	UAnimStateMachine* GetAnimationStateMachine() const { return AnimStateMachine; }
+
+	// Batch Pose Update (AnimInstance에서 사용)
+	void SetBoneLocalTransformDirect(int32 BoneIndex, const FTransform& NewLocalTransform);
+	void RefreshBoneTransforms();
 
 protected:
 	UAnimInstance* AnimInstance;

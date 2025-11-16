@@ -7,6 +7,7 @@
 #include "CharacterMovementComponent.h"
 #include "SceneComponent.h"
 #include "Source/Runtime/Engine/Components/SkeletalMeshComponent.h"
+#include "Source/Runtime/Engine/Components/CameraComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimStateMachine.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
 #include "Source/Editor/FBXLoader.h"
@@ -29,6 +30,7 @@ ACharacter::ACharacter()
 	: CharacterMovement(nullptr)
 	, SkeletalMeshComponent(nullptr)
 	, AnimStateMachine(nullptr)
+	, CameraComponent(nullptr)
 	, bIsCrouched(false)
 	, CrouchedHeightRatio(0.5f)
 {
@@ -50,6 +52,21 @@ ACharacter::ACharacter()
 		SkeletalMeshComponent->SetSkeletalMesh(GDataDir + "/X Bot.fbx");
 
 		UE_LOG("[Character] SkeletalMeshComponent created!");
+	}
+
+	// 카메라 컴포넌트 생성 (3인칭 뷰)
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera");
+	if (CameraComponent && SkeletalMeshComponent)
+	{
+		// SkeletalMesh에 Attach
+		CameraComponent->SetupAttachment(SkeletalMeshComponent);
+
+		// 3인칭 카메라 위치: 캐릭터 뒤 위
+		CameraComponent->SetRelativeLocation(FVector(-0.0f, 0.0f, 5.0f));
+
+		UE_LOG("[Character] CameraComponent created and attached to SkeletalMeshComponent!");
+		UE_LOG("[Character] CameraComponent parent: %p (SkeletalMesh: %p)",
+			CameraComponent->GetAttachParent(), SkeletalMeshComponent);
 	}
 }
 
@@ -167,6 +184,20 @@ void ACharacter::Tick(float DeltaSeconds)
 			}
 		}
 	}
+
+	// 카메라가 캐릭터를 따라가고 바라보도록 업데이트
+	if (CameraComponent)
+	{
+		FVector CharacterLocation = GetActorLocation();
+		FVector CameraOffset = FVector(-5.0f, 0.0f, 2.0f); // 뒤쪽 + 위쪽
+		FVector CameraLocation = CharacterLocation + CameraOffset;
+
+		CameraComponent->SetWorldLocation(CameraLocation);
+
+		// 카메라가 캐릭터를 바라보도록 회전 설정
+		FVector LookDirection = (CharacterLocation - CameraLocation).GetNormalized();
+		CameraComponent->SetForward(LookDirection);
+	}
 }
 
 void ACharacter::DuplicateSubObjects()
@@ -186,6 +217,11 @@ void ACharacter::DuplicateSubObjects()
 		else if (USkeletalMeshComponent* Skeletal = Cast<USkeletalMeshComponent>(Component))
 		{
 			SkeletalMeshComponent = Skeletal;
+		}
+		// CameraComponent 업데이트
+		else if (UCameraComponent* Camera = Cast<UCameraComponent>(Component))
+		{
+			CameraComponent = Camera;
 		}
 	}
 

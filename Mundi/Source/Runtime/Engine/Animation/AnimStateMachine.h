@@ -178,6 +178,12 @@ protected:
 	/** 전환 규칙들 */
 	TArray<FAnimStateTransition> Transitions;
 
+	/** 현재 상태 애니메이션 재생 시간 */
+	float CurrentAnimTime;
+
+	/** 이전 상태 애니메이션 재생 시간 (블렌딩용) */
+	float PreviousAnimTime;
+
 	/** 소유 Pawn */
 	APawn* OwnerPawn;
 

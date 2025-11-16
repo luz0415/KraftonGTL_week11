@@ -20,11 +20,10 @@ APawn::APawn()
 	, bNormalizeMovementInput(true)
 {
 	// InputComponent 생성
-	InputComponent = ObjectFactory::NewObject<UInputComponent>();
-	if (InputComponent)
-	{
-		InputComponent->SetOwner(this);
-	}
+	InputComponent = CreateDefaultSubobject<UInputComponent>("InputComponent");
+
+	UE_LOG("[Pawn] Constructor: InputComponent = %p, OwnedComponents.size() = %d",
+	       InputComponent, (int)OwnedComponents.Num());
 }
 
 APawn::~APawn()
@@ -139,4 +138,23 @@ void APawn::AddControllerRollInput(float DeltaRoll)
 {
 	// 기본 구현: 아무것도 하지 않음
 	// 비행기 등에서 필요 시 오버라이드
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 복제
+// ────────────────────────────────────────────────────────────────────────────
+
+void APawn::DuplicateSubObjects()
+{
+	Super::DuplicateSubObjects();
+
+	//InputComponent= ObjectFactory::NewObject<UInputComponent>();
+	// InputComponent 업데이트
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (UInputComponent* Input = Cast<UInputComponent>(Component))
+		{
+			InputComponent = Input;
+		}
+	}
 }

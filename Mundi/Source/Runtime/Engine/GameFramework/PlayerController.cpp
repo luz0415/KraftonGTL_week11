@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "PlayerController.h"
 #include "Pawn.h"
+#include "Character.h"
 #include "InputComponent.h"
 #include "InputManager.h"
 #include "PlayerCameraManager.h"
@@ -34,7 +35,7 @@ APlayerController::APlayerController()
 
 APlayerController::~APlayerController()
 {
-	DeleteObject(PlayerCameraManager);
+	//DeleteObject(PlayerCameraManager);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -105,10 +106,19 @@ void APlayerController::OnPossess(APawn* InPawn)
 		}
 
 		// PlayerCameraManager의 ViewTarget 설정
-		//if (PlayerCameraManager)
-		//{
-		//	PlayerCameraManager->SetViewTarget(InPawn);
-		//}
+		if (PlayerCameraManager)
+		{
+			// Character의 CameraComponent를 ViewTarget으로 설정
+			if (ACharacter* Character = Cast<ACharacter>(InPawn))
+			{
+				UCameraComponent* CameraComp = Character->CameraComponent;
+				if (CameraComp)
+				{
+					PlayerCameraManager->SetViewCamera(CameraComp);
+					UE_LOG("[PlayerController] Camera set to Character's CameraComponent");
+				}
+			}
+		}
 	}
 }
 

@@ -25,10 +25,10 @@ AController::AController()
 AController::~AController()
 {
 	// 빙의 해제
-	if (PossessedPawn)
+	/*if (PossessedPawn)
 	{
 		UnPossess();
-	}
+	}*/
 }
 
 // ────────────────────────────────────────────────────────────────────────────

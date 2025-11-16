@@ -7,6 +7,7 @@
 #include "ActorComponent.h"
 #include "Delegates.h"
 #include <functional>
+#include "UInputComponent.generated.h"
 
 /**
  * FInputActionBinding
@@ -93,10 +94,11 @@ struct FInputAxisBinding
  * - 축 바인딩 (연속 입력 값)
  * - 입력 우선순위 관리
  */
+UCLASS(DisplayName = "인풋 컴포넌트", Description = "인풋 컴포넌트입니다")
 class UInputComponent : public UActorComponent
 {
 public:
-	DECLARE_CLASS(UInputComponent, UActorComponent)
+	GENERATED_REFLECTION_BODY()
 
 	UInputComponent();
 	virtual ~UInputComponent() override;

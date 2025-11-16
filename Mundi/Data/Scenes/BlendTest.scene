@@ -1,9 +1,9 @@
 {
   "Actors" : {
-    "889" : {
+    "877" : {
       "ObjectName" : "APlayerCameraManager_2",
       "OwnedComponents" : [{
-          "Id" : 890,
+          "Id" : 878,
           "ObjectName" : "USceneComponent_3",
           "ParentId" : 0,
           "RelativeLocation" : [0.000000, 0.000000, 0.000000],
@@ -15,38 +15,27 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 890,
+      "RootComponentId" : 878,
       "Tag" : "",
       "Type" : "APlayerCameraManager",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "891" : {
-      "ObjectName" : "ACharacter_0",
+    "888" : {
+      "ObjectName" : "스태틱 메시_0",
       "OwnedComponents" : [{
-          "ObjectName" : "UCharacterMovementComponent_1",
-          "Type" : "UCharacterMovementComponent",
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bTickEnabled" : true
-        }, {
-          "Id" : 896,
+          "Id" : 889,
           "MaterialSlots" : [{
-              "Type" : "None"
-            }, {
-              "AssetPath" : "Beta_HighLimbsGeoSG3",
-              "Type" : "UMaterial"
-            }, {
-              "AssetPath" : "Beta_Joints_MAT1",
+              "AssetPath" : "texture",
               "Type" : "UMaterial"
             }],
-          "ObjectName" : "USkeletalMeshComponent_1",
+          "ObjectName" : "UStaticMeshComponent_1",
           "ParentId" : 0,
-          "RelativeLocation" : [1.532815, -1.532815, 0.249917],
+          "RelativeLocation" : [-1.003620, 1.334163, -0.173365],
           "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
-          "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "SkeletalMesh" : "Data/X Bot.fbx",
-          "Type" : "USkeletalMeshComponent",
+          "RelativeScale" : [22.637730, 17.122736, 1.000000],
+          "StaticMesh" : "Data/cube-tex.obj",
+          "Type" : "UStaticMeshComponent",
           "bBlockComponent" : false,
           "bCastShadows" : true,
           "bGenerateOverlapEvents" : true,
@@ -55,22 +44,21 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 896,
-      "SkeletalMeshComponent" : "",
+      "RootComponentId" : 889,
       "Tag" : "",
-      "Type" : "ACharacter",
+      "Type" : "AStaticMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "897" : {
+    "890" : {
       "ObjectName" : "앰비언트 라이트_0",
       "OwnedComponents" : [{
-          "Id" : 899,
+          "Id" : 891,
           "Intensity" : 1.000000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UAmbientLightComponent_2",
           "ParentId" : 0,
-          "RelativeLocation" : [5.623393, -6.718966, -0.020653],
+          "RelativeLocation" : [-1.003620, 1.334163, 2.399492],
           "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
           "RelativeScale" : [1.000000, 1.000000, 1.000000],
           "ShadowBias" : 0.000010,
@@ -85,20 +73,20 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 899,
+      "RootComponentId" : 891,
       "Tag" : "",
       "Type" : "AAmbientLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     }
   },
-  "NextUUID" : 922,
+  "NextUUID" : 918,
   "PerspectiveCamera" : {
     "FOV" : [60.000000],
     "FarClip" : [2000.000000],
-    "Location" : [6.753510, -1.900252, 2.169345],
+    "Location" : [-18.111897, 15.117134, 12.550261],
     "NearClip" : [0.100000],
-    "Rotation" : [0.000000, 9.099953, -177.401138]
+    "Rotation" : [0.000000, 24.900009, -43.100029]
   },
   "Version" : 1
 }

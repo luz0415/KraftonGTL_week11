@@ -106,6 +106,8 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 /bigobj /MP /Gh %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -373,6 +375,9 @@
     <ClCompile Include="Source\Runtime\Core\Memory\PlatformTime.cpp" />
     <ClCompile Include="Source\Runtime\Core\Misc\Color.cpp" />
     <ClCompile Include="Source\Runtime\Core\Misc\FName.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Misc\MiniDump.cpp">
+      <AdditionalOptions>/utf-8 /bigobj /MP</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="Source\Runtime\Core\Misc\VertexData.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\Actor.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\ActorComponent.cpp" />
@@ -517,7 +522,8 @@
     <ClCompile Include="Source\Slate\Windows\SceneWindow.cpp" />
     <ClCompile Include="Source\Slate\Windows\SControlPanel.cpp" />
     <ClCompile Include="Source\Slate\Windows\SDetailsWindow.cpp" />
-    <ClCompile Include="Source\Slate\Windows\SSkeletalMeshViewerWindow.cpp" />
+    <ClCompile Include="Source\Slate\Windows\SkeletalMeshViewerWindow.cpp" />
+    <ClCompile Include="Source\Slate\Windows\SkeletalMeshViewerWindow_Timeline.cpp" />
     <ClCompile Include="Source\Slate\Windows\SSplitter.cpp" />
     <ClCompile Include="Source\Slate\Windows\SSplitterH.cpp" />
     <ClCompile Include="Source\Slate\Windows\SSplitterV.cpp" />
@@ -594,6 +600,7 @@
     <ClCompile Include="Generated\AGameStateBase.generated.cpp" />
     <ClCompile Include="Generated\UAnimStateMachine.generated.cpp" />
     <ClCompile Include="Generated\USkeletalMesh.generated.cpp" />
+    <ClCompile Include="Generated\UInputComponent.generated.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -632,6 +639,7 @@
     <ClInclude Include="Source\Runtime\Core\Misc\Enums.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\Hash.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\JsonSerializer.h" />
+    <ClInclude Include="Source\Runtime\Core\Misc\MiniDump.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\Name.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\ObjectIterator.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\PathUtils.h" />
@@ -792,7 +800,7 @@
     <ClInclude Include="Source\Slate\Windows\SceneWindow.h" />
     <ClInclude Include="Source\Slate\Windows\SControlPanel.h" />
     <ClInclude Include="Source\Slate\Windows\SDetailsWindow.h" />
-    <ClInclude Include="Source\Slate\Windows\SSkeletalMeshViewerWindow.h" />
+    <ClInclude Include="Source\Slate\Windows\SkeletalMeshViewerWindow.h" />
     <ClInclude Include="Source\Slate\Windows\SSplitter.h" />
     <ClInclude Include="Source\Slate\Windows\SSplitterH.h" />
     <ClInclude Include="Source\Slate\Windows\SSplitterV.h" />
@@ -877,6 +885,7 @@
     <ClInclude Include="Generated\AGameStateBase.generated.h" />
     <ClInclude Include="Generated\UAnimStateMachine.generated.h" />
     <ClInclude Include="Generated\USkeletalMesh.generated.h" />
+    <ClInclude Include="Generated\UInputComponent.generated.h" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Shaders\Common\LightingBuffers.hlsl" />

@@ -650,6 +650,9 @@
     <ClCompile Include="Generated\USkeletalMesh.generated.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
+    <ClCompile Include="Generated\UInputComponent.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -1374,6 +1377,9 @@
       <Filter>Generated</Filter>
     </ClInclude>
     <ClInclude Include="Generated\USkeletalMesh.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\UInputComponent.generated.h">
       <Filter>Generated</Filter>
     </ClInclude>
   </ItemGroup>

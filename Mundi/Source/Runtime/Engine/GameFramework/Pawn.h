@@ -21,6 +21,7 @@ class UInputComponent;
  * - 입력 바인딩 설정 (SetupPlayerInputComponent)
  * - 기본 이동 입력 처리
  */
+UCLASS(DisplayName = "APawn", Description = "Pawn 클래스")
 class APawn : public AActor
 {
 public:
@@ -124,6 +125,12 @@ protected:
 
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	// ────────────────────────────────────────────────
+	// 복제
+	// ────────────────────────────────────────────────
+
+	void DuplicateSubObjects() override;
 
 	// ────────────────────────────────────────────────
 	// 멤버 변수

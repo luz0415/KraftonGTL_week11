@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SelectionManager.h"
 #include "Picking.h"
 #include "CameraActor.h"
@@ -28,9 +28,12 @@
 #include "Level.h"
 #include "LightManager.h"
 #include "LuaManager.h"
+#include "PlayerController.h"
+#include "Pawn.h"
 #include "ShapeComponent.h"
 #include "PlayerCameraManager.h"
 #include "Hash.h"
+#include"Character.h"
 
 IMPLEMENT_CLASS(UWorld)
 
@@ -331,6 +334,21 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 	}
 
 	PIEWorld->RenderSettings = InEditorWorld->RenderSettings;
+
+	// PlayerController 자동 생성 (GameMode 없이)
+	APlayerController* NewPlayerController = PIEWorld->SpawnActor<APlayerController>();
+	if (NewPlayerController)
+	{
+		UE_LOG("[World] PlayerController created for PIE: %s", NewPlayerController->GetName().c_str());
+
+		// 첫 번째 Pawn 찾아서 자동으로 Possess
+		ACharacter* Character = PIEWorld->SpawnActor<ACharacter>();
+		if (Character)
+		{
+			NewPlayerController->Possess(Character);
+			UE_LOG("[World] PlayerController possessed Pawn: %s", Character->GetName().c_str());
+		}
+	}
 
 	return PIEWorld;
 }
