@@ -386,6 +386,7 @@
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimNode_StateMachine.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSequenceBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSequence.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\MixamoChainMapper.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimDataModel.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimInstance.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.cpp" />
@@ -661,6 +662,7 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNode_StateMachine.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequenceBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequence.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\MixamoChainMapper.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimDataModel.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
