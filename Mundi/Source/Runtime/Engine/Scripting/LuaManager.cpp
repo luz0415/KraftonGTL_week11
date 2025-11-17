@@ -6,6 +6,7 @@
 #include "CameraActor.h"
 #include "CameraComponent.h"
 #include "PlayerCameraManager.h"
+#include "SkeletalMeshComponent.h"
 #include <tuple>
 
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
@@ -630,11 +631,125 @@ sol::protected_function FLuaManager::GetFunc(sol::environment& Env, const char* 
         return {};
 
     sol::object Object = Env[Name];
-    
+
     if (Object == sol::nil || Object.get_type() != sol::type::function)
         return {};
-    
+
     sol::protected_function Func = Object.as<sol::protected_function>();
-    
+
     return Func;
+}
+
+bool FLuaManager::ExecuteNotify(const FString& NotifyClassName, const FString& PropertyData, USkeletalMeshComponent* MeshComp, float TriggerTime, float Duration)
+{
+    if (!Lua || !MeshComp)
+    {
+        return false;
+    }
+
+    FString NotifyPath = FString("Data/Scripts/Notifies/") + NotifyClassName + ".lua";
+
+    try
+    {
+        sol::load_result LoadResult = Lua->load_file(NotifyPath.c_str());
+        if (!LoadResult.valid())
+        {
+            sol::error Err = LoadResult;
+            UE_LOG("[LuaManager] Failed to load Notify script '%s': %s", NotifyPath.c_str(), Err.what());
+            return false;
+        }
+
+        sol::protected_function_result ExecResult = LoadResult();
+        if (!ExecResult.valid())
+        {
+            sol::error Err = ExecResult;
+            UE_LOG("[LuaManager] Failed to execute Notify script '%s': %s", NotifyPath.c_str(), Err.what());
+            return false;
+        }
+
+        sol::table NotifyClass = ExecResult;
+        if (!NotifyClass.valid())
+        {
+            UE_LOG("[LuaManager] Notify script '%s' did not return a table", NotifyPath.c_str());
+            return false;
+        }
+
+        sol::table NotifyInstance = Lua->create_table();
+        NotifyInstance[sol::metatable_key] = Lua->create_table_with("__index", NotifyClass);
+
+        if (!PropertyData.empty() && PropertyData != "{}")
+        {
+            try
+            {
+                JSON Props = JSON::Load(PropertyData);
+
+                if (Props.JSONType() == JSON::Class::Object)
+                {
+                    auto ObjMap = Props.ObjectRange();
+                    for (auto& Pair : ObjMap)
+                    {
+                        const FString& Key = Pair.first;
+                        const JSON& Value = Pair.second;
+
+                        if (Value.JSONType() == JSON::Class::String)
+                        {
+                            NotifyInstance[Key] = Value.ToString();
+                        }
+                        else if (Value.JSONType() == JSON::Class::Floating)
+                        {
+                            NotifyInstance[Key] = Value.ToFloat();
+                        }
+                        else if (Value.JSONType() == JSON::Class::Integral)
+                        {
+                            NotifyInstance[Key] = Value.ToInt();
+                        }
+                        else if (Value.JSONType() == JSON::Class::Boolean)
+                        {
+                            NotifyInstance[Key] = Value.ToBool();
+                        }
+                    }
+                }
+            }
+            catch (const std::exception& e)
+            {
+                UE_LOG("[LuaManager] Failed to parse PropertyData for Notify '%s': %s", NotifyClassName.c_str(), e.what());
+            }
+        }
+
+        if (Duration > 0.0f)
+        {
+            sol::function NotifyBegin = NotifyClass["NotifyBegin"];
+            if (NotifyBegin.valid())
+            {
+                sol::protected_function_result Result = NotifyBegin(NotifyInstance, MeshComp, TriggerTime);
+                if (!Result.valid())
+                {
+                    sol::error Err = Result;
+                    UE_LOG("[LuaManager] NotifyBegin failed for '%s': %s", NotifyClassName.c_str(), Err.what());
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            sol::function Notify = NotifyClass["Notify"];
+            if (Notify.valid())
+            {
+                sol::protected_function_result Result = Notify(NotifyInstance, MeshComp, TriggerTime);
+                if (!Result.valid())
+                {
+                    sol::error Err = Result;
+                    UE_LOG("[LuaManager] Notify failed for '%s': %s", NotifyClassName.c_str(), Err.what());
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+    catch (const sol::error& e)
+    {
+        UE_LOG("[LuaManager] Exception in ExecuteNotify for '%s': %s", NotifyClassName.c_str(), e.what());
+        return false;
+    }
 }

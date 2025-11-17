@@ -63,6 +63,8 @@ bool SSkeletalMeshViewerWindow::Initialize(float StartX, float StartY, float Wid
     IconLoop = UResourceManager::GetInstance().Load<UTexture>("Data/Icon/Loop_24x.png");
     IconLoopOff = UResourceManager::GetInstance().Load<UTexture>("Data/Icon/Loop_24x_OFF.png");
 
+    ScanNotifyLibrary();
+
     // Create first tab/state
     OpenNewTab("Viewer 1");
     if (ActiveState && ActiveState->Viewport)
@@ -1752,4 +1754,50 @@ void SSkeletalMeshViewerWindow::ExpandToSelectedBone(ViewerState* State, int32 B
         State->ExpandedBoneIndices.insert(CurrentIndex);
         CurrentIndex = Skeleton->Bones[CurrentIndex].ParentIndex;
     }
+}
+
+void SSkeletalMeshViewerWindow::ScanNotifyLibrary()
+{
+    AvailableNotifyClasses.clear();
+    AvailableNotifyStateClasses.clear();
+
+    FString NotifyDir = "Data/Scripts/Notifies/";
+
+    WIN32_FIND_DATAA FindData;
+    HANDLE hFind;
+
+    FString NotifyPattern = NotifyDir + "Notify_*.lua";
+    hFind = FindFirstFileA(NotifyPattern.c_str(), &FindData);
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        do
+        {
+            if (!(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                FString FileName(FindData.cFileName);
+                FString FileNameWithoutExt = FileName.substr(0, FileName.find_last_of('.'));
+                AvailableNotifyClasses.push_back(FileNameWithoutExt);
+            }
+        } while (FindNextFileA(hFind, &FindData));
+        FindClose(hFind);
+    }
+
+    FString StatePattern = NotifyDir + "NotifyState_*.lua";
+    hFind = FindFirstFileA(StatePattern.c_str(), &FindData);
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        do
+        {
+            if (!(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+            {
+                FString FileName(FindData.cFileName);
+                FString FileNameWithoutExt = FileName.substr(0, FileName.find_last_of('.'));
+                AvailableNotifyStateClasses.push_back(FileNameWithoutExt);
+            }
+        } while (FindNextFileA(hFind, &FindData));
+        FindClose(hFind);
+    }
+
+    UE_LOG("[SkeletalMeshViewer] Scanned Notify Library: %d Notifies, %d NotifyStates",
+        AvailableNotifyClasses.Num(), AvailableNotifyStateClasses.Num());
 }

@@ -1695,12 +1695,44 @@ void SSkeletalMeshViewerWindow::DrawNotifyTracksPanel(ViewerState* State, float 
         snprintf(PopupID, sizeof(PopupID), "TrackMenu%d", TrackIndex);
         if (ImGui::BeginPopup(PopupID))
         {
-            if (ImGui::MenuItem("Insert New Notify"))
+            if (ImGui::BeginMenu("Add Notify"))
             {
-                State->SelectedNotifyTrackIndex = TrackIndex;
-                FAnimNotifyEvent NewNotify(State->CurrentAnimationTime, FName("NewNotify"));
-                State->CurrentAnimation->AddNotify(NewNotify);
+                for (const FString& NotifyClass : AvailableNotifyClasses)
+                {
+                    if (ImGui::MenuItem(NotifyClass.c_str()))
+                    {
+                        State->SelectedNotifyTrackIndex = TrackIndex;
+                        FAnimNotifyEvent NewNotify;
+                        NewNotify.NotifyName = FName(NotifyClass);
+                        NewNotify.TriggerTime = State->CurrentAnimationTime;
+                        NewNotify.Duration = 0.0f;
+                        NewNotify.TrackIndex = TrackIndex;
+                        State->CurrentAnimation->AddNotify(NewNotify);
+                    }
+                }
+                ImGui::EndMenu();
             }
+
+            if (ImGui::BeginMenu("Add Notify State"))
+            {
+                for (const FString& StateClass : AvailableNotifyStateClasses)
+                {
+                    if (ImGui::MenuItem(StateClass.c_str()))
+                    {
+                        State->SelectedNotifyTrackIndex = TrackIndex;
+                        FAnimNotifyEvent NewNotify;
+                        NewNotify.NotifyName = FName(StateClass);
+                        NewNotify.TriggerTime = State->CurrentAnimationTime;
+                        NewNotify.Duration = 1.0f;
+                        NewNotify.TrackIndex = TrackIndex;
+                        State->CurrentAnimation->AddNotify(NewNotify);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem("Remove Track"))
             {
                 State->NotifyTrackNames.erase(State->NotifyTrackNames.begin() + TrackIndex);
