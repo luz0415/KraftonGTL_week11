@@ -13,8 +13,18 @@ USkeletalMeshComponent::USkeletalMeshComponent()
     // Enable component tick for animation updates
     bCanEverTick = true;
 
-    // 테스트용 기본 메시 설정
-    SetSkeletalMesh(GDataDir + "/Test.fbx");
+    // 테스트용 기본 메시 설정 제거 (메모리 누수 방지)
+    // SetSkeletalMesh(GDataDir + "/Test.fbx");
+}
+
+USkeletalMeshComponent::~USkeletalMeshComponent()
+{
+    // AnimInstance 정리 (메모리 누수 방지)
+    if (AnimInstance)
+    {
+        ObjectFactory::DeleteObject(AnimInstance);
+        AnimInstance = nullptr;
+    }
 }
 
 /**
@@ -22,6 +32,13 @@ USkeletalMeshComponent::USkeletalMeshComponent()
  */
 void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InAnimInstance)
 {
+    // 기존 AnimInstance 삭제 (메모리 누수 방지)
+    if (AnimInstance && AnimInstance != InAnimInstance)
+    {
+        ObjectFactory::DeleteObject(AnimInstance);
+        AnimInstance = nullptr;
+    }
+
     AnimInstance = InAnimInstance;
     if (AnimInstance)
     {
@@ -388,6 +405,9 @@ void USkeletalMeshComponent::DuplicateSubObjects()
                 AnimInstance->StopAnimation();
             }
         }
+
+        // 이전 AnimInstance 삭제 (메모리 누수 방지)
+        ObjectFactory::DeleteObject(OldAnimInstance);
     }
 }
 

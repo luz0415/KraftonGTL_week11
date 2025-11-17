@@ -6,6 +6,8 @@
 #include "FbxLoader.h"
 #include <ObjManager.h>
 
+#include "MiniDump.h"
+
 
 float UEditorEngine::ClientWidth = 1024.0f;
 float UEditorEngine::ClientHeight = 1024.0f;
@@ -69,7 +71,7 @@ void UEditorEngine::GetViewportSize(HWND hWnd)
     //레거시
     extern float CLIENTWIDTH;
     extern float CLIENTHEIGHT;
-    
+
     CLIENTWIDTH = ClientWidth;
     CLIENTHEIGHT = ClientHeight;
 }
@@ -100,10 +102,10 @@ LRESULT CALLBACK UEditorEngine::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
             EditorINI["WindowWidth"] = std::to_string(NewWidth);
             EditorINI["WindowHeight"] = std::to_string(NewHeight);
 
-            if (ImGui::GetCurrentContext() != nullptr) 
+            if (ImGui::GetCurrentContext() != nullptr)
             {
                 ImGuiIO& io = ImGui::GetIO();
-                if (io.DisplaySize.x > 0 && io.DisplaySize.y > 0) 
+                if (io.DisplaySize.x > 0 && io.DisplaySize.y > 0)
                 {
                     UI.RepositionImGuiWindows();
                 }
@@ -187,12 +189,12 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
 
     // Audio Device 초기화
     FAudioDevice::Initialize();
-          
+
     //매니저 초기화
     UI.Initialize(HWnd, RHIDevice.GetDevice(), RHIDevice.GetDeviceContext());
     INPUT.Initialize(HWnd);
 
-    FObjManager::Preload(); 
+    FObjManager::Preload();
     UFbxLoader::PreLoad();
 
     FAudioDevice::Preload();
@@ -218,8 +220,8 @@ void UEditorEngine::Tick(float DeltaSeconds)
 {
     //@TODO UV 스크롤 입력 처리 로직 이동
     HandleUVInput(DeltaSeconds);
-    
-    //@TODO: Delta Time 계산 + EditorActor Tick은 어떻게 할 것인가 
+
+    //@TODO: Delta Time 계산 + EditorActor Tick은 어떻게 할 것인가
     for (auto& WorldContext : WorldContexts)
     {
         WorldContext.World->Tick(DeltaSeconds);
@@ -233,7 +235,7 @@ void UEditorEngine::Tick(float DeltaSeconds)
         //    WorldContext.World->Tick(DeltaSeconds, WorldContext.WorldType);
         //}
     }
-    
+
     SLATE.Update(DeltaSeconds);
     UI.Update(DeltaSeconds);
     INPUT.Update();
@@ -322,10 +324,11 @@ void UEditorEngine::MainLoop()
 
         Tick(DeltaSeconds);
         Render();
-        
+
         // Shader Hot Reloading - Call AFTER render to avoid mid-frame resource conflicts
         // This ensures all GPU commands are submitted before we check for shader updates
         UResourceManager::GetInstance().CheckAndReloadShaders(DeltaSeconds);
+    	CrashLoop();
     }
 }
 
@@ -354,7 +357,7 @@ void UEditorEngine::Shutdown()
 
     // AudioDevice 종료
     FAudioDevice::Shutdown();
-     
+
     // IMPORTANT: Explicitly release Renderer before RHIDevice destructor runs
     // Renderer may hold references to D3D resources
     Renderer.reset();

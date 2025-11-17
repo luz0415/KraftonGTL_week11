@@ -160,6 +160,11 @@ public:
     UObject() : UUID(GenerateUUID()), InternalIndex(UINT32_MAX), ObjectName("UObject") {}
     UObject(const UObject&) = default;
 
+	// [!!!] 크래쉬 테스트 전용 [!!!]
+	// 평소에는 절대 사용하지 마세요
+	void DeleteObjectDirty();
+
+
 protected:
     virtual ~UObject() = default;
     // Centralized deletion entry accessible to ObjectFactory only

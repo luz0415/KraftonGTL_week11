@@ -61,72 +61,23 @@ void InitializeMiniDump()
 	SetUnhandledExceptionFilter(UnhandledExceptionHandler);
 }
 
-// 크래시 시스템 활성화 플래그
-static volatile bool bCrashTestArmed = false;
+static bool bIsCrashInitialized = false;
 
-// 크래시를 유발할 나머지 연산의 분모
-static volatile int CrashModulo = 0;
-
-// 크래시를 유발할 목표 나머지 값
-static volatile int TargetModuloResult = 0;
-
-// 총 함수 호출 횟수 (싱글 스레드이므로 __declspec(thread) 불필요)
-static volatile LONG64 TotalCallCount = 0;
-
-// [!!!] 재진입(무한 재귀) 방지를 위한 가드 변수
-static bool bIsInsideHook = false;
-
-void CrashNow()
+void CauseCrash()
 {
-	printf("!!! CRASH TRIGGERED at Total Call Count: %lld !!!\n", TotalCallCount);
-	volatile int* pNull = nullptr;
-	*pNull = 0;
-}
-// 랜덤 숫자 생성기
-int GetRandomInt(int min, int max)
-{
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(min, max - 1);
-	return distrib(gen);
+	bIsCrashInitialized = true;
 }
 
-void CauseCrashRandom(int32 Modulo)
+void CrashLoop()
 {
-	if (Modulo <= 1) Modulo = 10000; // 0이나 1로 나누는 것 방지
+	if (!bIsCrashInitialized) { return; }
 
-	CrashModulo = Modulo;
-	// 0 ~ (modulo-1) 사이의 랜덤한 값을 목표로 설정
-	TargetModuloResult = GetRandomInt(0, CrashModulo);
+	uint32 ObjCount = GUObjectArray.Num();
+	uint32 RandomIdx = std::rand() % ObjCount;
+	UObject* Target = GUObjectArray[RandomIdx];
 
-	TotalCallCount = 0; // 카운터 리셋
-	bCrashTestArmed = true; // "활성화"
-
-	printf("[CrashTest] Armed. Will crash when (TotalCalls %% %d) == %d\n",
-		   CrashModulo, TargetModuloResult);
-}
-
-// --- C 컴파일러 훅 구현 ---
-extern "C" {
-
-	// /Gh 플래그에 의해 모든 함수 "시작" 시 호출됨
-	void __cdecl _penter(void)
+	if (Target)
 	{
-		if (bIsInsideHook) { return; }
-
-		bIsInsideHook = true;
-
-		// 1. 시스템이 활성화되지 않았으면 즉시 리턴
-		if (bCrashTestArmed)
-		{
-			TotalCallCount++;
-			if ((TotalCallCount % CrashModulo) == TargetModuloResult)
-			{
-				bCrashTestArmed = false;
-				CrashNow();
-			}
-		}
-
-		bIsInsideHook = false;
+		Target->DeleteObjectDirty();
 	}
 }

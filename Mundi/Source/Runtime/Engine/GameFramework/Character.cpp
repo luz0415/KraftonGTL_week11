@@ -109,9 +109,13 @@ void ACharacter::BeginPlay()
 				UFbxLoader& FbxLoader = UFbxLoader::GetInstance();
 
 				// 애니메이션 로드
-				UAnimSequence* IdleAnim = FbxLoader.LoadFbxAnimation(GDataDir + "/XBOT_Idle.fbx", *Skeleton);
-				UAnimSequence* WalkAnim = FbxLoader.LoadFbxAnimation(GDataDir + "/XBOT_Walking.fbx", *Skeleton);
-				UAnimSequence* RunAnim = FbxLoader.LoadFbxAnimation(GDataDir + "/XBOT_Slow Run.fbx", *Skeleton);
+				TArray<UAnimSequence*> IdleAnims = FbxLoader.LoadAllFbxAnimations(GDataDir + "/XBOT_Idle.fbx", *Skeleton);
+				TArray<UAnimSequence*> WalkAnims = FbxLoader.LoadAllFbxAnimations(GDataDir + "/XBOT_Walking.fbx", *Skeleton);
+				TArray<UAnimSequence*> RunAnims = FbxLoader.LoadAllFbxAnimations(GDataDir + "/XBOT_Slow Run.fbx", *Skeleton);
+
+				UAnimSequence* IdleAnim = IdleAnims.Num() > 0 ? IdleAnims[1] : nullptr;
+				UAnimSequence* WalkAnim = WalkAnims.Num() > 0 ? WalkAnims[1] : nullptr;
+				UAnimSequence* RunAnim = RunAnims.Num() > 0 ? RunAnims[1] : nullptr;
 
 				// ===== StateMachine 사용 =====
 				AnimStateMachine = NewObject<UAnimStateMachine>();

@@ -27,7 +27,7 @@ class USkeletalMeshComponent : public USkinnedMeshComponent
 
 public:
 	USkeletalMeshComponent();
-	~USkeletalMeshComponent() override = default;
+	~USkeletalMeshComponent() override;
 
 	// Functions
 	void TickComponent(float DeltaTime) override;
@@ -77,8 +77,9 @@ public:
 	void SetBoneLocalTransformDirect(int32 BoneIndex, const FTransform& NewLocalTransform);
 	void RefreshBoneTransforms();
 
+
+
 protected:
-	UAnimInstance* AnimInstance;
 	TArray<FTransform> CurrentLocalSpacePose;
 	TArray<FTransform> CurrentComponentSpacePose;
 	TArray<FMatrix> TempFinalSkinningMatrices;
@@ -89,6 +90,7 @@ protected:
 	void UpdateFinalSkinningMatrices();
 
 private:
+	UAnimInstance* AnimInstance;
 	float TestTime;
 	bool bIsInitialized;
 	FTransform TestBoneBasePose;

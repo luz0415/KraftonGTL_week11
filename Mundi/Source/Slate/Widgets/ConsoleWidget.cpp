@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ConsoleWidget.h"
 #include "ObjectFactory.h"
 #include "GlobalConsole.h"
@@ -9,7 +9,7 @@
 #include <cctype>
 #include <cstring>
 #include <algorithm>
-//#include "MiniDump.h"
+#include "MiniDump.h"
 
 using std::max;
 using std::min;
@@ -296,9 +296,9 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		for (const FString& cmd : HelpCommandList)
 			AddLog("- %s", cmd.c_str());
 	}
-	else if (Stricmp(command_line, "CAUSECRASH") == 0)
+	else if (Stricmp(command_line, "CRASH") == 0)
 	{
-		//CauseCrashRandom();
+		CauseCrash();
 	}
 	else if (Stricmp(command_line, "HISTORY") == 0)
 	{

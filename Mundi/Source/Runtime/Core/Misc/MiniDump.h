@@ -26,7 +26,8 @@ LONG WINAPI UnhandledExceptionHandler(struct _EXCEPTION_POINTERS* ExceptionInfo)
 void InitializeMiniDump();
 
 /**
- * @brief "CauseCrashRandom [modulo]" 콘솔 명령어에 바인딩할 함수.
- * @param Modulo (총 호출 횟수 % modulo) == (랜덤 값) 일 때 크래시 유발
+ * @brief "CauseCrash" 콘솔 명령어에 바인딩할 함수.
 */
-void CauseCrashRandom(int32 Modulo = 10000);
+void CauseCrash();
+
+void CrashLoop();
