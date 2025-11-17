@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "PropertyRenderer.h"
 #include "ImGui/imgui.h"
 #include "Vector.h"
@@ -18,6 +18,7 @@
 #include "PlatformProcess.h"
 #include "SkeletalMeshComponent.h"
 #include "USlateManager.h"
+#include "Source/Runtime/Engine/Animation/BlendSpace2D.h"
 
 // Disable warnings for third-party library
 #pragma warning(push)
@@ -1074,6 +1075,29 @@ bool UPropertyRenderer::RenderSkeletalMeshProperty(const FProperty& Prop, void* 
 		else
 		{
 			USlateManager::GetInstance().CloseSkeletalMeshViewer();
+		}
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("BlendSpace2D Editor"))
+	{
+		if (!USlateManager::GetInstance().IsBlendSpace2DEditorOpen())
+		{
+			// 테스트용 BlendSpace2D 생성
+			UBlendSpace2D* TestBlendSpace = NewObject<UBlendSpace2D>();
+			//TestBlendSpace->XAxisName = "Speed";
+			//TestBlendSpace->YAxisName = "Direction";
+			//TestBlendSpace->XAxisMin = 0.0f;
+			//TestBlendSpace->XAxisMax = 400.0f;
+			//TestBlendSpace->YAxisMin = -180.0f;
+			//TestBlendSpace->YAxisMax = 180.0f;
+
+			USlateManager::GetInstance().OpenBlendSpace2DEditor(TestBlendSpace);
+		}
+		else
+		{
+			USlateManager::GetInstance().CloseBlendSpace2DEditor();
 		}
 	}
 

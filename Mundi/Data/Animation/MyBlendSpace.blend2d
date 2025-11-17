@@ -1,0 +1,9 @@
+{
+  "SampleCount" : 0,
+  "XAxisMax" : 400.000000,
+  "XAxisMin" : 0.000000,
+  "XAxisName" : "Speed",
+  "YAxisMax" : 180.000000,
+  "YAxisMin" : -180.000000,
+  "YAxisName" : "Direction"
+}

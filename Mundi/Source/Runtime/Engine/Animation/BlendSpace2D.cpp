@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "BlendSpace2D.h"
 #include "AnimSequence.h"
+#include <filesystem>
 
 IMPLEMENT_CLASS(UBlendSpace2D)
 
@@ -16,6 +17,87 @@ UBlendSpace2D::UBlendSpace2D()
 
 UBlendSpace2D::~UBlendSpace2D()
 {
+}
+
+/**
+ * @brief BlendSpace2D 직렬화
+ */
+void UBlendSpace2D::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+	UAnimationAsset::Serialize(bInIsLoading, InOutHandle);
+
+	if (bInIsLoading)
+	{
+		// 로드
+		FJsonSerializer::ReadFloat(InOutHandle, "XAxisMin", XAxisMin, 0.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "XAxisMax", XAxisMax, 400.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "YAxisMin", YAxisMin, -180.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "YAxisMax", YAxisMax, 180.0f);
+		FJsonSerializer::ReadString(InOutHandle, "XAxisName", XAxisName, "X");
+		FJsonSerializer::ReadString(InOutHandle, "YAxisName", YAxisName, "Y");
+
+		// 샘플 포인트 로드
+		Samples.Empty();
+		int32 SampleCount = 0;
+		FJsonSerializer::ReadInt32(InOutHandle, "SampleCount", SampleCount, 0);
+
+		for (int32 i = 0; i < SampleCount; ++i)
+		{
+			FString Key = "Sample_" + std::to_string(i);
+			JSON SampleJson;
+			if (FJsonSerializer::ReadObject(InOutHandle, Key.c_str(), SampleJson, JSON::Make(JSON::Class::Object)))
+			{
+				FBlendSample Sample;
+
+				FJsonSerializer::ReadFloat(SampleJson, "PositionX", Sample.Position.X, 0.0f);
+				FJsonSerializer::ReadFloat(SampleJson, "PositionY", Sample.Position.Y, 0.0f);
+
+				// 애니메이션 경로로 로드 (TODO: ResourceManager 통합)
+				FString AnimPath;
+				FJsonSerializer::ReadString(SampleJson, "AnimationPath", AnimPath, "");
+				// Sample.Animation = LoadAnimSequence(AnimPath);
+				// 지금은 nullptr (나중에 ResourceManager에서 로드)
+				Sample.Animation = nullptr;
+
+				Samples.Add(Sample);
+			}
+		}
+	}
+	else
+	{
+		// 저장
+		InOutHandle["XAxisMin"] = XAxisMin;
+		InOutHandle["XAxisMax"] = XAxisMax;
+		InOutHandle["YAxisMin"] = YAxisMin;
+		InOutHandle["YAxisMax"] = YAxisMax;
+		InOutHandle["XAxisName"] = XAxisName;
+		InOutHandle["YAxisName"] = YAxisName;
+
+		// 샘플 포인트 저장
+		InOutHandle["SampleCount"] = static_cast<int>(Samples.Num());
+
+		for (int32 i = 0; i < Samples.Num(); ++i)
+		{
+			const FBlendSample& Sample = Samples[i];
+			JSON SampleJson = JSON::Make(JSON::Class::Object);
+
+			SampleJson["PositionX"] = Sample.Position.X;
+			SampleJson["PositionY"] = Sample.Position.Y;
+
+			// 애니메이션 경로 저장
+			if (Sample.Animation)
+			{
+				SampleJson["AnimationPath"] = Sample.Animation->GetName();
+			}
+			else
+			{
+				SampleJson["AnimationPath"] = "";
+			}
+
+			FString Key = "Sample_" + std::to_string(i);
+			InOutHandle[Key] = SampleJson;
+		}
+	}
 }
 
 /**
@@ -307,4 +389,49 @@ void UBlendSpace2D::CalculateBarycentricWeights(
 	OutWeightA = FMath::Max(0.0f, OutWeightA);
 	OutWeightB = FMath::Max(0.0f, OutWeightB);
 	OutWeightC = FMath::Max(0.0f, OutWeightC);
+}
+
+/**
+ * @brief BlendSpace2D를 파일로 저장
+ */
+bool UBlendSpace2D::SaveToFile(const FString& FilePath)
+{
+	JSON JsonData = JSON::Make(JSON::Class::Object);
+	Serialize(false, JsonData);
+
+	std::filesystem::path Path(FilePath);
+	bool bSuccess = FJsonSerializer::SaveJsonToFile(JsonData, Path);
+
+	if (bSuccess)
+	{
+		UE_LOG("BlendSpace2D saved to: %s", FilePath.c_str());
+	}
+	else
+	{
+		UE_LOG("Failed to save BlendSpace2D to: %s", FilePath.c_str());
+	}
+
+	return bSuccess;
+}
+
+/**
+ * @brief 파일로부터 BlendSpace2D 로드
+ */
+UBlendSpace2D* UBlendSpace2D::LoadFromFile(const FString& FilePath)
+{
+	JSON JsonData;
+	std::filesystem::path Path(FilePath);
+
+	if (!FJsonSerializer::LoadJsonFromFile(JsonData, Path))
+	{
+		UE_LOG("Failed to load BlendSpace2D from: %s", FilePath.c_str());
+		return nullptr;
+	}
+
+	// 새 BlendSpace2D 객체 생성 및 역직렬화
+	UBlendSpace2D* BlendSpace = NewObject<UBlendSpace2D>();
+	BlendSpace->Serialize(true, JsonData);
+
+	UE_LOG("BlendSpace2D loaded from: %s", FilePath.c_str());
+	return BlendSpace;
 }

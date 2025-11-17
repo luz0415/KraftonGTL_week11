@@ -45,6 +45,25 @@ public:
 	UBlendSpace2D();
 	virtual ~UBlendSpace2D() override;
 
+	// ===== 직렬화 =====
+	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	// ===== 파일 저장/로드 =====
+
+	/**
+	 * @brief BlendSpace2D를 파일로 저장
+	 * @param FilePath 저장할 파일 경로 (예: "Data/Animation/Locomotion.blend2d")
+	 * @return 성공 여부
+	 */
+	bool SaveToFile(const FString& FilePath);
+
+	/**
+	 * @brief 파일로부터 BlendSpace2D 로드
+	 * @param FilePath 로드할 파일 경로
+	 * @return 로드된 BlendSpace2D 객체 (실패 시 nullptr)
+	 */
+	static UBlendSpace2D* LoadFromFile(const FString& FilePath);
+
 	// ===== 파라미터 범위 =====
 	float XAxisMin;  // X축 최소값
 	float XAxisMax;  // X축 최대값

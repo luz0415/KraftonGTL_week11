@@ -2,6 +2,7 @@
 #include "USlateManager.h"
 
 #include "CameraActor.h"
+#include "Source/Runtime/Engine/Animation/BlendSpace2D.h"
 #include "Windows/SWindow.h"
 #include "Windows/SSplitterV.h"
 #include "Windows/SDetailsWindow.h"
@@ -9,6 +10,7 @@
 #include "Windows/ControlPanelWindow.h"
 #include "Windows/SViewportWindow.h"
 #include "Windows/SkeletalMeshViewerWindow.h"
+#include "Windows/BlendSpace2DEditorWindow.h"
 #include "Windows/ConsoleWindow.h"
 #include "Windows/ContentBrowserWindow.h"
 #include "Widgets/MainToolbarWidget.h"
@@ -222,6 +224,48 @@ void USlateManager::CloseSkeletalMeshViewer()
     SkeletalViewerWindow = nullptr;
 }
 
+void USlateManager::OpenBlendSpace2DEditor(UBlendSpace2D* BlendSpace)
+{
+    if (BlendSpace2DEditorWindow)
+    {
+        // 이미 열려있으면 BlendSpace만 교체
+        if (BlendSpace)
+        {
+            BlendSpace2DEditorWindow->SetBlendSpace(BlendSpace);
+        }
+        return;
+    }
+
+    BlendSpace2DEditorWindow = new SBlendSpace2DEditorWindow();
+
+    // 중앙에 적당한 크기로 열기
+    const float toolbarHeight = 50.0f;
+    const float availableHeight = Rect.GetHeight() - toolbarHeight;
+    const float w = 1200.0f;
+    const float h = 800.0f;
+    const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+    const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+    BlendSpace2DEditorWindow->Initialize(x, y, w, h, World, Device);
+
+    // BlendSpace 설정
+    if (BlendSpace)
+    {
+        BlendSpace2DEditorWindow->SetBlendSpace(BlendSpace);
+    }
+}
+
+void USlateManager::CloseBlendSpace2DEditor()
+{
+    if (!BlendSpace2DEditorWindow)
+    {
+        return;
+    }
+
+    delete BlendSpace2DEditorWindow;
+    BlendSpace2DEditorWindow = nullptr;
+}
+
 void USlateManager::SwitchLayout(EViewportLayoutMode NewMode)
 {
     if (NewMode == CurrentMode) return;
@@ -420,6 +464,18 @@ void USlateManager::Render()
     {
         SkeletalViewerWindow->OnRender();
     }
+
+    // Render BlendSpace2D Editor
+    if (BlendSpace2DEditorWindow)
+    {
+        BlendSpace2DEditorWindow->OnRender();
+
+        // 윈도우가 닫혔으면 삭제
+        if (!BlendSpace2DEditorWindow->IsOpen())
+        {
+            CloseBlendSpace2DEditor();
+        }
+    }
 }
 
 void USlateManager::RenderAfterUI()
@@ -427,6 +483,11 @@ void USlateManager::RenderAfterUI()
     if (SkeletalViewerWindow)
     {
         SkeletalViewerWindow->OnRenderViewport();
+    }
+
+    if (BlendSpace2DEditorWindow)
+    {
+        BlendSpace2DEditorWindow->OnRenderViewport();
     }
 }
 
@@ -447,6 +508,11 @@ void USlateManager::Update(float DeltaSeconds)
     if (SkeletalViewerWindow)
     {
         SkeletalViewerWindow->OnUpdate(DeltaSeconds);
+    }
+
+    if (BlendSpace2DEditorWindow)
+    {
+        BlendSpace2DEditorWindow->OnUpdate(DeltaSeconds);
     }
 
     // 콘솔 애니메이션 업데이트
@@ -592,6 +658,13 @@ void USlateManager::OnMouseMove(FVector2D MousePos)
         return;
     }
 
+    // Route to BlendSpace2D editor if hovered
+    if (BlendSpace2DEditorWindow && BlendSpace2DEditorWindow->IsHover(MousePos))
+    {
+        BlendSpace2DEditorWindow->OnMouseMove(MousePos);
+        return;
+    }
+
     if (ActiveViewport)
     {
         ActiveViewport->OnMouseMove(MousePos);
@@ -609,7 +682,13 @@ void USlateManager::OnMouseDown(FVector2D MousePos, uint32 Button)
         SkeletalViewerWindow->OnMouseDown(MousePos, Button);
         return;
     }
-    
+
+    if (BlendSpace2DEditorWindow && BlendSpace2DEditorWindow->Rect.Contains(MousePos))
+    {
+        BlendSpace2DEditorWindow->OnMouseDown(MousePos, Button);
+        return;
+    }
+
     if (ActiveViewport)
     {
     }
@@ -648,6 +727,12 @@ void USlateManager::OnMouseUp(FVector2D MousePos, uint32 Button)
     if (SkeletalViewerWindow && SkeletalViewerWindow->Rect.Contains(MousePos))
     {
         SkeletalViewerWindow->OnMouseUp(MousePos, Button);
+        // do not return; still allow panels to finish mouse up
+    }
+
+    if (BlendSpace2DEditorWindow && BlendSpace2DEditorWindow->Rect.Contains(MousePos))
+    {
+        BlendSpace2DEditorWindow->OnMouseUp(MousePos, Button);
         // do not return; still allow panels to finish mouse up
     }
 
@@ -716,6 +801,12 @@ void USlateManager::Shutdown()
     {
         delete SkeletalViewerWindow;
         SkeletalViewerWindow = nullptr;
+    }
+
+    if (BlendSpace2DEditorWindow)
+    {
+        delete BlendSpace2DEditorWindow;
+        BlendSpace2DEditorWindow = nullptr;
     }
 }
 
