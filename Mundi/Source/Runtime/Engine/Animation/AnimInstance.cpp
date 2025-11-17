@@ -4,7 +4,10 @@
 #include "AnimSequenceBase.h"
 #include "AnimSequence.h"
 #include "AnimationTypes.h"
+#include "BlendSpace2D.h"
 #include "Source/Runtime/AssetManagement/SkeletalMesh.h"
+#include "Source/Runtime/Engine/GameFramework/Pawn.h"
+#include "Actor.h"
 
 IMPLEMENT_CLASS(UAnimInstance)
 
@@ -236,4 +239,42 @@ void UAnimInstance::EvaluateAnimation()
 
 	// 모든 본 업데이트 완료 후 한 번만 갱신
 	OwnerComponent->RefreshBoneTransforms();
+}
+
+/**
+ * @brief State Machine 애셋 설정
+ */
+void UAnimInstance::SetStateMachine(UAnimStateMachine* InStateMachine)
+{
+	StateMachineNode.SetStateMachine(InStateMachine);
+
+	// Owner Pawn 설정 (SkeletalMeshComponent의 Owner를 사용)
+	if (OwnerComponent)
+	{
+		AActor* Owner = OwnerComponent->GetOwner();
+		APawn* OwnerPawn = Cast<APawn>(Owner);
+		if (OwnerPawn)
+		{
+			StateMachineNode.Initialize(OwnerPawn);
+		}
+	}
+}
+
+/**
+ * @brief Blend Space 2D 애셋 설정
+ */
+void UAnimInstance::SetBlendSpace2D(UBlendSpace2D* InBlendSpace)
+{
+	BlendSpace2DNode.SetBlendSpace(InBlendSpace);
+
+	// Owner Pawn 설정 (SkeletalMeshComponent의 Owner를 사용)
+	if (OwnerComponent)
+	{
+		AActor* Owner = OwnerComponent->GetOwner();
+		APawn* OwnerPawn = Cast<APawn>(Owner);
+		if (OwnerPawn)
+		{
+			BlendSpace2DNode.Initialize(OwnerPawn);
+		}
+	}
 }

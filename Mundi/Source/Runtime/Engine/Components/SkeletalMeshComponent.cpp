@@ -1,6 +1,9 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SkeletalMeshComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimSingleNodeInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimStateMachine.h"
+#include "Source/Runtime/Engine/Animation/AnimSequence.h"
 
 USkeletalMeshComponent::USkeletalMeshComponent()
     : AnimInstance(nullptr)
@@ -62,10 +65,71 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
     Super::TickComponent(DeltaTime);
 
     // Animation 인스턴스 업데이트
-    // UpdateAnimation 내부에서 시간 업데이트 -> 포즈 평가(Evaluate) -> 본 트랜스폼 설정 수행
     if (AnimInstance)
     {
-        AnimInstance->UpdateAnimation(DeltaTime);
+        // BlendSpace2D 노드 우선 체크 (더 우선순위가 높음)
+        FAnimNode_BlendSpace2D* BlendSpace2DNode = AnimInstance->GetBlendSpace2DNode();
+        if (BlendSpace2DNode && BlendSpace2DNode->GetBlendSpace())
+        {
+            // BlendSpace2D 노드 업데이트
+            BlendSpace2DNode->Update(DeltaTime);
+
+            // BlendSpace2D에서 계산된 포즈를 가져와 적용
+            FPoseContext PoseContext;
+            PoseContext.LocalSpacePose.SetNum(CurrentLocalSpacePose.Num());
+            BlendSpace2DNode->Evaluate(PoseContext);
+
+            // 계산된 포즈를 CurrentLocalSpacePose에 적용
+            if (PoseContext.GetNumBones() == CurrentLocalSpacePose.Num())
+            {
+                for (int32 BoneIdx = 0; BoneIdx < PoseContext.GetNumBones(); ++BoneIdx)
+                {
+                    CurrentLocalSpacePose[BoneIdx] = PoseContext.LocalSpacePose[BoneIdx];
+                }
+
+                // 포즈 재계산 강제
+                ForceRecomputePose();
+            }
+        }
+        // BlendSpace2D가 없으면 State Machine 체크
+        else
+        {
+            FAnimNode_StateMachine* StateMachineNode = AnimInstance->GetStateMachineNode();
+            if (StateMachineNode && StateMachineNode->GetStateMachine())
+            {
+                // State Machine 노드 업데이트
+                StateMachineNode->Update(DeltaTime);
+
+                // State Machine에서 계산된 포즈를 가져와 적용
+                FPoseContext PoseContext;
+
+                // Skeleton으로 PoseContext 초기화 (CRITICAL FIX)
+                if (SkeletalMesh && SkeletalMesh->GetSkeleton())
+                {
+                    PoseContext.Initialize(SkeletalMesh->GetSkeleton());
+                }
+
+                PoseContext.LocalSpacePose.SetNum(CurrentLocalSpacePose.Num());
+                StateMachineNode->Evaluate(PoseContext);
+
+                // 계산된 포즈를 CurrentLocalSpacePose에 적용
+                if (PoseContext.GetNumBones() == CurrentLocalSpacePose.Num())
+                {
+                    for (int32 BoneIdx = 0; BoneIdx < PoseContext.GetNumBones(); ++BoneIdx)
+                    {
+                        CurrentLocalSpacePose[BoneIdx] = PoseContext.LocalSpacePose[BoneIdx];
+                    }
+
+                    // 포즈 재계산 강제
+                    ForceRecomputePose();
+                }
+            }
+            else
+            {
+                // State Machine도 없으면 기본 AnimInstance 업데이트
+                AnimInstance->UpdateAnimation(DeltaTime);
+            }
+        }
     }
 }
 
@@ -280,12 +344,89 @@ void USkeletalMeshComponent::UpdateFinalSkinningMatrices()
     }
 }
 
+// ===== Phase 4: 애니메이션 편의 메서드 구현 =====
+
+/**
+ * @brief 애니메이션 재생 (간편 메서드)
+ */
+void USkeletalMeshComponent::PlayAnimation(UAnimSequence* AnimToPlay, bool bLooping)
+{
+    if (!AnimToPlay)
+    {
+        return;
+    }
+
+    // AnimSingleNodeInstance 생성 (없으면)
+    UAnimSingleNodeInstance* SingleNodeInstance = Cast<UAnimSingleNodeInstance>(AnimInstance);
+    if (!SingleNodeInstance)
+    {
+        SingleNodeInstance = NewObject<UAnimSingleNodeInstance>();
+        SetAnimInstance(SingleNodeInstance);
+    }
+
+    // 애니메이션 설정 및 재생
+    SingleNodeInstance->SetAnimationAsset(AnimToPlay);
+    SingleNodeInstance->Play(bLooping);
+}
+
+/**
+ * @brief 애니메이션 정지
+ */
+void USkeletalMeshComponent::StopAnimation()
+{
+    if (AnimInstance)
+    {
+        AnimInstance->StopAnimation();
+    }
+}
+
+/**
+ * @brief State Machine 설정 (AnimInstance를 통해)
+ */
+void USkeletalMeshComponent::SetAnimationStateMachine(UAnimStateMachine* InStateMachine)
+{
+    // AnimInstance가 없으면 생성
+    if (!AnimInstance)
+    {
+        AnimInstance = NewObject<UAnimInstance>();
+        AnimInstance->Initialize(this);
+        UE_LOG("[SkeletalMeshComponent] AnimInstance created for StateMachine");
+    }
+
+    if (AnimInstance)
+    {
+        AnimInstance->SetStateMachine(InStateMachine);
+    }
+}
+
+/**
+ * @brief BlendSpace2D 설정 (AnimInstance를 통해)
+ */
+void USkeletalMeshComponent::SetBlendSpace2D(UBlendSpace2D* InBlendSpace)
+{
+    // AnimInstance가 없으면 생성
+    if (!AnimInstance)
+    {
+        AnimInstance = NewObject<UAnimInstance>();
+        AnimInstance->Initialize(this);
+        UE_LOG("[SkeletalMeshComponent] AnimInstance created for BlendSpace2D");
+    }
+
+    if (AnimInstance)
+    {
+        AnimInstance->SetBlendSpace2D(InBlendSpace);
+    }
+}
+
 /**
  * @brief 컴포넌트 복제 시 AnimInstance 상태도 복제
  */
 void USkeletalMeshComponent::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();
+
+    // Tick 활성화 (복제 시 유지되지 않으므로 명시적으로 설정)
+    bCanEverTick = true;
 
     // AnimInstance가 있으면 복제
     if (AnimInstance)

@@ -5,6 +5,7 @@
 #include "Windows/SSplitterH.h"
 #include "Windows/SViewportWindow.h"
 #include "Windows/SkeletalMeshViewerWindow.h"
+#include "Windows/BlendSpace2DEditorWindow.h"
 
 class SSceneIOWindow; // 새로 추가할 UI
 class SDetailsWindow;
@@ -79,6 +80,11 @@ public:
     void CloseSkeletalMeshViewer();
     bool IsSkeletalMeshViewerOpen() const { return SkeletalViewerWindow != nullptr; }
 
+    // Blend Space 2D Editor 관리
+    void OpenBlendSpace2DEditor(UBlendSpace2D* BlendSpace = nullptr);
+    void CloseBlendSpace2DEditor();
+    bool IsBlendSpace2DEditorOpen() const { return BlendSpace2DEditorWindow != nullptr; }
+
 private:
     FRect Rect; // 이전엔 SWindow로부터 상속받던 영역 정보
 
@@ -123,6 +129,9 @@ private:
 
     // Detached skeletal mesh viewer window
     SSkeletalMeshViewerWindow* SkeletalViewerWindow = nullptr;
+
+    // Blend Space 2D Editor window
+    SBlendSpace2DEditorWindow* BlendSpace2DEditorWindow = nullptr;
 
     // Content Browser (Bottom panel overlay with animation)
     UContentBrowserWindow* ContentBrowserWindow = nullptr;

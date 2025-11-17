@@ -6,6 +6,7 @@
 #include "ImGui/imgui_internal.h"
 #include "USlateManager.h"
 #include "ThumbnailManager.h"
+#include "Source/Runtime/Engine/Animation/BlendSpace2D.h"
 #include <algorithm>
 
 IMPLEMENT_CLASS(UContentBrowserWindow)
@@ -445,6 +446,17 @@ void UContentBrowserWindow::HandleDoubleClick(FFileEntry& Entry)
 		USlateManager::GetInstance().OpenSkeletalMeshViewerWithFile(pathStr.c_str());
 		UE_LOG("Opening SkeletalMeshViewer for: %s", Entry.FileName.c_str());
 	}
+	else if (ext == ".blend2d")
+	{
+		// BlendSpace2D 에디터 열기
+		std::string pathStr = Entry.Path.string();
+		UBlendSpace2D* LoadedBS = UBlendSpace2D::LoadFromFile(pathStr.c_str());
+		if (LoadedBS)
+		{
+			USlateManager::GetInstance().OpenBlendSpace2DEditor(LoadedBS);
+			UE_LOG("Opening BlendSpace2D Editor for: %s", Entry.FileName.c_str());
+		}
+	}
 	else if (ext == ".obj")
 	{
 		// StaticMesh는 현재 전용 뷰어가 없으므로 로그만 출력
@@ -479,6 +491,10 @@ const char* UContentBrowserWindow::GetIconForFile(const FFileEntry& Entry) const
 	else if (ext == ".fbx" || ext == ".obj")
 	{
 		return "[MESH]";
+	}
+	else if (ext == ".blend2d")
+	{
+		return "[ANIM]";
 	}
 	else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".dds" || ext == ".tga")
 	{

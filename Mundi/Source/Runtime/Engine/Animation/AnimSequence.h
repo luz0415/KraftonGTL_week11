@@ -23,6 +23,9 @@ public:
 	// 특정 프레임의 본 Transform 샘플링
 	bool GetBoneTransformAtFrame(const FString& BoneName, int32 Frame, FVector& OutPosition, FQuat& OutRotation, FVector& OutScale) const;
 
+	// Skeleton 정보 가져오기
+	const FSkeleton* GetSkeleton() const { return DataModel ? DataModel->GetSkeleton() : nullptr; }
+
 private:
 	// 보간 헬퍼 함수
 	FVector InterpolatePosition(const TArray<FVector>& Keys, float Alpha, int32 Frame0, int32 Frame1) const;

@@ -1,13 +1,13 @@
 #pragma once
 #include "ResourceBase.h"
-
+#include"USkeletalMesh.generated.h"
 class UAnimSequence;
 
 class USkeletalMesh : public UResourceBase
 {
 public:
-    DECLARE_CLASS(USkeletalMesh, UResourceBase)
-
+   // DECLARE_CLASS(USkeletalMesh, UResourceBase)
+	GENERATED_REFLECTION_BODY()
     USkeletalMesh();
     virtual ~USkeletalMesh() override;
 

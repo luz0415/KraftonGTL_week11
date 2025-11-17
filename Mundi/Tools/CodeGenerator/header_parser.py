@@ -104,18 +104,21 @@ class Property:
                     return macro_name
 
             # Fallback: 기존 하드코딩된 방식
-            if 'utexture' in type_lower:
-                return 'ADD_PROPERTY_TEXTURE'
-            elif 'ustaticmesh' in type_lower:
-                return 'ADD_PROPERTY_STATICMESH'
-            elif 'uskeletalmesh' in type_lower:
-                return 'ADD_PROPERTY_SKELETALMESH'
-            elif 'umaterial' in type_lower:
-                return 'ADD_PROPERTY_MATERIAL'
-            elif 'usound' in type_lower:
-                return 'ADD_PROPERTY_AUDIO'
-            else:
-                return 'ADD_PROPERTY'
+            # Component 타입은 제외하고 에셋 타입만 특수 처리
+            if 'component' not in type_lower:
+                if 'utexture' in type_lower:
+                    return 'ADD_PROPERTY_TEXTURE'
+                elif 'ustaticmesh' in type_lower:
+                    return 'ADD_PROPERTY_STATICMESH'
+                elif 'uskeletalmesh' in type_lower:
+                    return 'ADD_PROPERTY_SKELETALMESH'
+                elif 'umaterial' in type_lower:
+                    return 'ADD_PROPERTY_MATERIAL'
+                elif 'usound' in type_lower:
+                    return 'ADD_PROPERTY_AUDIO'
+
+            # Component 타입이거나 일반 ObjectPtr
+            return 'ADD_PROPERTY'
 
         # 범위가 있는 프로퍼티
         if self.has_range:
@@ -407,6 +410,9 @@ class HeaderParser:
         params_str: str, metadata: str, is_const: bool
     ) -> Function:
         """함수 메타데이터 파싱"""
+        # return_type에서 virtual, inline, static 등의 키워드 제거
+        return_type = return_type.replace('virtual', '').replace('inline', '').replace('static', '').strip()
+
         func = Function(
             name=name,
             display_name=name,

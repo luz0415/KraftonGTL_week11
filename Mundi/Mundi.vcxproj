@@ -104,7 +104,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation;$(ProjectDir)Source\Runtime\Engine\Audio</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
@@ -134,7 +134,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation;$(ProjectDir)Source\Runtime\Engine\Audio</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -164,7 +164,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation;$(ProjectDir)Source\Runtime\Engine\Audio</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
@@ -194,7 +194,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTex\;$(SolutionDir)Mundi\ThirdParty\Include\DirectXTK;$(SolutionDir)Mundi\ThirdParty\Include\Lua;$(SolutionDir)Mundi\ThirdParty\Include\sol;$(SolutionDir)Mundi\ThirdParty\Include;$(SolutionDir)Mundi\ThirdParty\Include\FBX;$(ProjectDir)Source\Runtime\Engine\Animation;$(ProjectDir)Source\Runtime\Engine\Audio</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -381,10 +381,17 @@
     <ClCompile Include="Source\Runtime\Core\Object\Object.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\ObjectFactory.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimationAsset.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimationRuntime.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimNode_BlendSpace2D.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimNode_StateMachine.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSequenceBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSequence.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimDataModel.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimInstance.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimStateMachine.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\BlendSpace2D.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\PoseContext.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Audio\Sound.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Collision\AABB.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Collision\BoundingSphere.cpp" />
@@ -399,9 +406,11 @@
     <ClCompile Include="Source\Runtime\Engine\Components\BoxComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CameraComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CapsuleComponent.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\CharacterMovementComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\DecalComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\DirectionalLightComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\HeightFogComponent.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\InputComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\LightComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\LightComponentBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\LineComponent.cpp" />
@@ -429,6 +438,8 @@
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Shake.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Vignette.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\CameraActor.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\Character.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\Controller.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\DecalActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\DirectionalLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\EditorEngine.cpp" />
@@ -436,10 +447,14 @@
     <ClCompile Include="Source\Runtime\Engine\GameFramework\FakeSpotLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\FAudioDevice.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\GameEngine.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\GameModeBase.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\GameStateBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\HeightFogActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Info.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Level.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\Pawn.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\PlayerCameraManager.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\PlayerController.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SkeletalMeshActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SpotLightActor.cpp" />
@@ -498,6 +513,7 @@
     <ClCompile Include="Source\Slate\Widgets\SceneManagerWidget.cpp" />
     <ClCompile Include="Source\Slate\Widgets\TargetActorTransformWidget.cpp" />
     <ClCompile Include="Source\Slate\Widgets\Widget.cpp" />
+    <ClCompile Include="Source\Slate\Windows\BlendSpace2DEditorWindow.cpp" />
     <ClCompile Include="Source\Slate\Windows\ConsoleWindow.cpp" />
     <ClCompile Include="Source\Slate\Windows\ContentBrowserWindow.cpp" />
     <ClCompile Include="Source\Slate\Windows\ControlPanelWindow.cpp" />
@@ -575,6 +591,16 @@
     <ClCompile Include="Generated\ASkeletalMeshActor.generated.cpp" />
     <ClCompile Include="Generated\ASpotLightActor.generated.cpp" />
     <ClCompile Include="Generated\AStaticMeshActor.generated.cpp" />
+    <ClCompile Include="Generated\APawn.generated.cpp" />
+    <ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp" />
+    <ClCompile Include="Generated\ACharacter.generated.cpp" />
+    <ClCompile Include="Generated\AController.generated.cpp" />
+    <ClCompile Include="Generated\APlayerController.generated.cpp" />
+    <ClCompile Include="Generated\AGameModeBase.generated.cpp" />
+    <ClCompile Include="Generated\AGameStateBase.generated.cpp" />
+    <ClCompile Include="Generated\UAnimStateMachine.generated.cpp" />
+    <ClCompile Include="Generated\USkeletalMesh.generated.cpp" />
+    <ClCompile Include="Generated\UInputComponent.generated.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -628,12 +654,19 @@
     <ClInclude Include="Source\Runtime\Core\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Runtime\Core\Object\ObjectMacros.h" />
     <ClInclude Include="Source\Runtime\Core\Object\Property.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimationRuntime.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimationTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimationAsset.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimNode_BlendSpace2D.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimNode_StateMachine.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequenceBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequence.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimDataModel.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimInstance.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimStateMachine.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\BlendSpace2D.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\PoseContext.h" />
     <ClInclude Include="Source\Runtime\Engine\Audio\Sound.h" />
     <ClInclude Include="Source\Runtime\Engine\Collision\AABB.h" />
     <ClInclude Include="Source\Runtime\Engine\Collision\BoundingSphere.h" />
@@ -648,9 +681,11 @@
     <ClInclude Include="Source\Runtime\Engine\Components\BoxComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CameraComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CapsuleComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\CharacterMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\DecalComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\DirectionalLightComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\HeightFogComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\InputComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\LightComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\LightComponentBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\LineComponent.h" />
@@ -670,6 +705,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\SphereComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SpotLightComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\StaticMeshComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\TestAutoBindComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\TextRenderComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CameraModifierBase.h" />
@@ -678,6 +714,8 @@
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Shake.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Vignette.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\CameraActor.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\Character.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\Controller.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\DirectionalLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\EditorEngine.h" />
@@ -685,10 +723,14 @@
     <ClInclude Include="Source\Runtime\Engine\GameFramework\FakeSpotLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\FAudioDevice.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\GameEngine.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\GameModeBase.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\GameStateBase.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\HeightFogActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Info.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Level.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\Pawn.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\PlayerCameraManager.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\PlayerController.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\PointLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SkeletalMeshActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SpotLightActor.h" />
@@ -753,6 +795,7 @@
     <ClInclude Include="Source\Slate\Widgets\SceneManagerWidget.h" />
     <ClInclude Include="Source\Slate\Widgets\TargetActorTransformWidget.h" />
     <ClInclude Include="Source\Slate\Widgets\Widget.h" />
+    <ClInclude Include="Source\Slate\Windows\BlendSpace2DEditorWindow.h" />
     <ClInclude Include="Source\Slate\Windows\ConsoleWindow.h" />
     <ClInclude Include="Source\Slate\Windows\ContentBrowserWindow.h" />
     <ClInclude Include="Source\Slate\Windows\ControlPanelWindow.h" />
@@ -837,6 +880,16 @@
     <ClInclude Include="Generated\ASkeletalMeshActor.generated.h" />
     <ClInclude Include="Generated\ASpotLightActor.generated.h" />
     <ClInclude Include="Generated\AStaticMeshActor.generated.h" />
+    <ClInclude Include="Generated\APawn.generated.h" />
+    <ClInclude Include="Generated\UCharacterMovementComponent.generated.h" />
+    <ClInclude Include="Generated\ACharacter.generated.h" />
+    <ClInclude Include="Generated\AController.generated.h" />
+    <ClInclude Include="Generated\APlayerController.generated.h" />
+    <ClInclude Include="Generated\AGameModeBase.generated.h" />
+    <ClInclude Include="Generated\AGameStateBase.generated.h" />
+    <ClInclude Include="Generated\UAnimStateMachine.generated.h" />
+    <ClInclude Include="Generated\USkeletalMesh.generated.h" />
+    <ClInclude Include="Generated\UInputComponent.generated.h" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Shaders\Common\LightingBuffers.hlsl" />

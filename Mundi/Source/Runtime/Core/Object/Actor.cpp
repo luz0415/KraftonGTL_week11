@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Actor.h"
 #include "SceneComponent.h"
 #include "ObjectFactory.h"
@@ -72,6 +72,10 @@ void AActor::Tick(float DeltaSeconds)
 
 void AActor::EndPlay()
 {
+	if (IsPendingDestroy())
+	{
+		return;
+	}
 	for (UActorComponent* Comp : OwnedComponents)
 	{
 		if (Comp)

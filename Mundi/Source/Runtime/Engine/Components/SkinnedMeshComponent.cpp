@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SkinnedMeshComponent.h"
 #include "MeshBatchElement.h"
 #include "PlatformTime.h"
@@ -215,7 +215,7 @@ void USkinnedMeshComponent::SetSkeletalMesh(const FString& PathFileName)
    {
       VertexBuffer->Release();
       VertexBuffer = nullptr;
-   }
+   } 
 
    if (SkeletalMesh && SkeletalMesh->GetSkeletalMeshData())
    {

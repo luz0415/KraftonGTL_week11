@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 #include "SkinnedMeshComponent.h"
 #include "USkeletalMeshComponent.generated.h"
 
 class UAnimInstance;
+class UAnimStateMachine;
+class UAnimSequence;
 struct FAnimNotifyEvent;
 
 /**
@@ -45,6 +47,31 @@ public:
 	void SetAnimInstance(UAnimInstance* InAnimInstance);
 	void SetBoneLocalTransform(int32 BoneIndex, const FTransform& NewLocalTransform);
 	void SetBoneWorldTransform(int32 BoneIndex, const FTransform& NewWorldTransform);
+
+	// ===== Phase 4: 애니메이션 편의 메서드 =====
+
+	/**
+	 * @brief 애니메이션 재생 (간편 메서드)
+	 *
+	 * AnimInstance를 자동 생성하고 애니메이션을 재생.
+	 *
+	 * @param AnimToPlay 재생할 애니메이션
+	 * @param bLooping 루프 재생 여부
+	 */
+	void PlayAnimation(UAnimSequence* AnimToPlay, bool bLooping = true);
+
+	/**
+	 * @brief 애니메이션 정지
+	 */
+	void StopAnimation();
+
+	/**
+	 * @brief State Machine 설정 (AnimInstance를 통해)
+	 *
+	 * @param InStateMachine 설정할 State Machine 애셋
+	 */
+	void SetAnimationStateMachine(UAnimStateMachine* InStateMachine);
+	void SetBlendSpace2D(class UBlendSpace2D* InBlendSpace);
 
 	// Batch Pose Update (AnimInstance에서 사용)
 	void SetBoneLocalTransformDirect(int32 BoneIndex, const FTransform& NewLocalTransform);

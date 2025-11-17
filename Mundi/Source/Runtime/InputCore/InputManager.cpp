@@ -139,7 +139,9 @@ void UInputManager::ProcessMessage(HWND hWnd, UINT message, WPARAM wParam, LPARA
             if (Hovered && Hovered->Name)
             {
                 const char* Name = Hovered->Name;
-                if (strcmp(Name, "SkeletalMeshViewport") == 0)
+                if (strcmp(Name, "SkeletalMeshViewport") == 0 ||
+                    strcmp(Name, "BlendSpace2DViewport") == 0 ||
+                    strcmp(Name, "ViewportRenderArea") == 0)
                 {
                     IsUIHover = false;
                 }
