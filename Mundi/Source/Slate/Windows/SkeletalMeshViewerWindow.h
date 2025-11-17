@@ -115,6 +115,13 @@ private:
 
     // Notify 라이브러리 관리
     void ScanNotifyLibrary();
+    void CreateNewNotifyScript(const FString& ScriptName, bool bIsNotifyState);
+    void OpenNotifyScriptInEditor(const FString& NotifyClassName, bool bIsNotifyState);
     TArray<FString> AvailableNotifyClasses;
     TArray<FString> AvailableNotifyStateClasses;
+
+    // New Notify Script 다이얼로그 상태
+    bool bShowNewNotifyDialog = false;
+    bool bShowNewNotifyStateDialog = false;
+    char NewNotifyNameBuffer[128] = "";
 };
