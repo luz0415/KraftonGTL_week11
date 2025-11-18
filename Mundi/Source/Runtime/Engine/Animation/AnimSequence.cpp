@@ -79,6 +79,9 @@ void UAnimSequence::Load(const FString& InFilePath, ID3D11Device* InDevice)
 		}
 	}
 
+	// FbxSkeleton 삭제
+	// 각 AnimSequence의 DataModel이 Skeleton의 복사본을 소유하므로
+	// 원본 FbxSkeleton은 여기서 안전하게 삭제 가능
 	delete FbxSkeleton;
 
 	// FilePath와 LastModifiedTime 설정

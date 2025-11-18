@@ -1727,8 +1727,8 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 				// DataModel 로드
 				Reader << *DataModel;
 
-				// CRITICAL FIX: Skeleton 레퍼런스 저장 (캐시 로드 시)
-				DataModel->Skeleton = const_cast<FSkeleton*>(&TargetSkeleton);
+				// CRITICAL FIX: Skeleton 복사본 생성 (캐시 로드 시)
+				DataModel->SetSkeleton(TargetSkeleton);
 
 				AnimSequence->SetDataModel(DataModel);
 				Reader.Close();
@@ -1800,8 +1800,8 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 			DataModel = NewObject<UAnimDataModel>();
 			AnimSequence->SetDataModel(DataModel);
 
-			// CRITICAL FIX: Skeleton 레퍼런스 저장
-			DataModel->Skeleton = const_cast<FSkeleton*>(&TargetSkeleton);
+			// CRITICAL FIX: Skeleton 복사본 생성
+			DataModel->SetSkeleton(TargetSkeleton);
 
 			DataModel->BoneAnimationTracks.Reserve(TargetSkeleton.Bones.Num());
 
