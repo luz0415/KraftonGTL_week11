@@ -30,6 +30,24 @@ USkeletalMeshComponent::~USkeletalMeshComponent()
 void USkeletalMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// AnimationMode에 따라 AnimInstance 초기화
+	if (AnimationMode == EAnimationMode::AnimationSingleNode && AnimationData.AnimToPlay)
+	{
+		// SingleNode 모드: AnimationData로부터 AnimInstance 자동 생성
+		if (!AnimInstance)
+		{
+			UAnimSingleNodeInstance* SingleNodeInstance = NewObject<UAnimSingleNodeInstance>();
+			SetAnimInstance(SingleNodeInstance);
+		}
+
+		// AnimationData 설정 적용
+		if (UAnimSingleNodeInstance* SingleNodeInstance = Cast<UAnimSingleNodeInstance>(AnimInstance))
+		{
+			AnimationData.Initialize(SingleNodeInstance);
+		}
+	}
+
 	if (AnimInstance)
 	{
 		AnimInstance->NativeBeginPlay();
@@ -460,6 +478,24 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
 
     if (bInIsLoading)
     {
+        // AnimationMode 로드
+        int32 ModeValue = static_cast<int32>(EAnimationMode::AnimationSingleNode);
+        FJsonSerializer::ReadInt32(InOutHandle, "AnimationMode", ModeValue, static_cast<int32>(EAnimationMode::AnimationSingleNode));
+        AnimationMode = static_cast<EAnimationMode>(ModeValue);
+
+        // AnimationData 로드 (AnimationSingleNode 모드용)
+        FString AnimToPlayPath;
+        FJsonSerializer::ReadString(InOutHandle, "AnimToPlayPath", AnimToPlayPath, "");
+        FJsonSerializer::ReadBool(InOutHandle, "bSavedLooping", AnimationData.bSavedLooping, true);
+        FJsonSerializer::ReadBool(InOutHandle, "bSavedPlaying", AnimationData.bSavedPlaying, true);
+        FJsonSerializer::ReadFloat(InOutHandle, "SavedPosition", AnimationData.SavedPosition, 0.0f);
+        FJsonSerializer::ReadFloat(InOutHandle, "SavedPlayRate", AnimationData.SavedPlayRate, 1.0f);
+
+        if (!AnimToPlayPath.empty())
+        {
+            AnimationData.AnimToPlay = RESOURCE.Load<UAnimSequence>(AnimToPlayPath);
+        }
+
         // AnimInstance 로드
         bool bHasAnimInstance = false;
         FJsonSerializer::ReadBool(InOutHandle, "HasAnimInstance", bHasAnimInstance, false);
@@ -494,6 +530,23 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
     }
     else
     {
+        // AnimationMode 저장
+        InOutHandle["AnimationMode"] = static_cast<uint8>(AnimationMode);
+
+        // AnimationData 저장 (AnimationSingleNode 모드용)
+        if (AnimationData.AnimToPlay)
+        {
+            InOutHandle["AnimToPlayPath"] = AnimationData.AnimToPlay->GetFilePath();
+        }
+        else
+        {
+            InOutHandle["AnimToPlayPath"] = FString("");
+        }
+        InOutHandle["bSavedLooping"] = AnimationData.bSavedLooping;
+        InOutHandle["bSavedPlaying"] = AnimationData.bSavedPlaying;
+        InOutHandle["SavedPosition"] = AnimationData.SavedPosition;
+        InOutHandle["SavedPlayRate"] = AnimationData.SavedPlayRate;
+
         // AnimInstance 저장
         bool bHasAnimInstance = (AnimInstance != nullptr);
         InOutHandle["HasAnimInstance"] = bHasAnimInstance;
