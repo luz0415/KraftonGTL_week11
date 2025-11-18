@@ -159,6 +159,7 @@ void SAnimStateMachineWindow::OnRender()
 
                         if (ActiveState->StateMachine->SaveToFile(SavePath))
                         {
+                        	RESOURCE.Reload<UAnimStateMachine>(SavePath);
                             UE_LOG("StateMachine saved: %S", SavePath.c_str());
                         }
                         else
@@ -183,19 +184,19 @@ void SAnimStateMachineWindow::OnRender()
 
             if (!SelectedPath.empty())
             {
-                FWideString FilePath = SelectedPath.wstring();
-                UAnimStateMachine* LoadedAsset = RESOURCE.Load<UAnimStateMachine>(FilePath);
+            	FString FinalPathStr = ResolveAssetRelativePath(WideToUTF8(SelectedPath.wstring()), "");
+            	UAnimStateMachine* LoadedAsset = RESOURCE.Load<UAnimStateMachine>(FinalPathStr);
 
                 if (LoadedAsset)
                 {
                     // @TODO - 이미 열려있는지 확인
                     // 로드된 에셋으로 새 탭 생성
                     std::string FileName = SelectedPath.stem().string();
-                    CreateNewGraphTab(FileName.c_str(), LoadedAsset, FilePath);
+                    CreateNewGraphTab(FileName.c_str(), LoadedAsset, UTF8ToWide(FinalPathStr));
                 }
                 else
                 {
-                    UE_LOG("[Error] Failed to load AnimStateMachine: %S", FilePath.c_str());
+                    UE_LOG("[Error] Failed to load AnimStateMachine: %S", FinalPathStr.c_str());
                 }
             }
         }
@@ -626,9 +627,6 @@ void SAnimStateMachineWindow::RenderCenterPanel(float width, float height)
             // 두께를 약간 두껍게
             ed::Link(Link.ID, Link.StartPinID, Link.EndPinID, linkColor, 3.0f);
         }
-
-        // ... (Handle Creation / Deletion / Selection 코드는 기존과 동일 유지) ...
-        // (기존 코드의 Create, Delete, Selection 부분 붙여넣기)
 
         // Handle Creation 부분 예시 (기존 코드 유지)
         if (ed::BeginCreate())

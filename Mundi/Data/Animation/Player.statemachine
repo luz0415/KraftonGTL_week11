@@ -14,13 +14,13 @@
       "Name" : "Idle"
     }, {
       "AnimAsset" : "Data/Animation/XBOT_Walking.fbx#mixamo.com",
-      "EditorPosX" : 184.000000,
-      "EditorPosY" : 89.000000,
+      "EditorPosX" : 206.000000,
+      "EditorPosY" : 83.000000,
       "Loop" : true,
       "Name" : "Walk"
     }],
   "Transitions" : [{
-      "BlendTime" : 0.100000,
+      "BlendTime" : 0.500000,
       "Conditions" : [{
           "Op" : 3,
           "Param" : "Speed",
@@ -29,7 +29,7 @@
       "From" : "Run",
       "To" : "Walk"
     }, {
-      "BlendTime" : 0.100000,
+      "BlendTime" : 0.500000,
       "Conditions" : [{
           "Op" : 2,
           "Param" : "Speed",
@@ -38,7 +38,7 @@
       "From" : "Idle",
       "To" : "Walk"
     }, {
-      "BlendTime" : 0.100000,
+      "BlendTime" : 0.500000,
       "Conditions" : [{
           "Op" : 2,
           "Param" : "Speed",
@@ -47,7 +47,7 @@
       "From" : "Walk",
       "To" : "Run"
     }, {
-      "BlendTime" : 0.200000,
+      "BlendTime" : 0.500000,
       "Conditions" : [{
           "Op" : 3,
           "Param" : "Speed",

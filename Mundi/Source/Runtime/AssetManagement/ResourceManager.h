@@ -50,6 +50,12 @@ public:
 	template<typename T, typename... Args>
 	T* Load(const FWideString& InFilePath, Args&&... InArgs);
 
+	template<typename T, typename... Args>
+	void Reload(const FString& InFilePath, Args&&... InArgs);
+
+	template<typename T, typename... Args>
+	void Reload(const FWideString& InFilePath, Args&&... InArgs);
+
 	template<typename T>
 	bool Add(const FString& InFilePath, UObject* InObject);
 
@@ -229,6 +235,49 @@ T* UResourceManager::Load(const FWideString& InFilePath, Args&&... InArgs)
 	FString ConvertedPath = WideToUTF8(InFilePath);
 
     return Load<T>(ConvertedPath, std::forward<Args>(InArgs)...);
+}
+
+template <typename T, typename ... Args>
+void UResourceManager::Reload(const FString& InFilePath, Args&&... InArgs)
+{
+	if (InFilePath.empty()) return;
+
+	// 1. 경로 정규화 (Load와 동일)
+	FString NormalizedPath = NormalizePath(InFilePath);
+	uint8 typeIndex = static_cast<uint8>(GetResourceType<T>());
+
+	// 2. 캐시에서 찾기
+	auto iter = Resources[typeIndex].find(NormalizedPath);
+
+	// 3. 있다면, 해당 포인터의 내용물을 파일 데이터로 덮어쓰기 (In-Place Update)
+	if (iter != Resources[typeIndex].end())
+	{
+		T* Resource = static_cast<T*>(iter->second);
+
+		// 기존 메모리 주소(Resource)는 유지한 채로 내용물만 디스크에서 다시 읽어옴
+		Resource->Load(NormalizedPath, Device, std::forward<Args>(InArgs)...);
+
+		UE_LOG("[ResourceManager] Force Reloaded: %s", NormalizedPath.c_str());
+	}
+	else
+	{
+		// 없다면 그냥 Load를 호출해서 새로 생성
+		Load<T>(InFilePath, std::forward<Args>(InArgs)...);
+	}
+}
+
+template <typename T, typename ... Args>
+void UResourceManager::Reload(const FWideString& InFilePath, Args&&... InArgs)
+{
+	if (InFilePath.empty())
+	{
+		return;
+	}
+
+	std::filesystem::path PathHelper(InFilePath);
+	FString ConvertedPath = WideToUTF8(InFilePath);
+
+	return Reload<T>(ConvertedPath, std::forward<Args>(InArgs)...);
 }
 
 template<>
