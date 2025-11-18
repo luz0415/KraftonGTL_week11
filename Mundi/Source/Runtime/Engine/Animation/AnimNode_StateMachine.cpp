@@ -63,7 +63,8 @@ void FAnimNode_StateMachine::Update(float DeltaSeconds)
 		{
 			// 전환 완료
 			bIsTransitioning = false;
-			PreviousStateName = FName();
+			//  인터럽트 플래그 해제
+			bIsInterruptedBlend = false;
 			PreviousNode = nullptr;
 			TransitionAlpha = 0.0f;
 		}
@@ -78,77 +79,61 @@ void FAnimNode_StateMachine::Update(float DeltaSeconds)
  */
 void FAnimNode_StateMachine::Evaluate(FPoseContext& OutPose)
 {
-    if (!ActiveNode) { return; }
+	if (!ActiveNode) { return; }
 	UAnimSequence* CurrentAnim = ActiveNode->AnimationAsset;
-	CurrentAnim->GetDataModel()->Skeleton = const_cast<FSkeleton*>(OutPose.Skeleton); // 미친 테스트코드임 지금 Anim Skeleton이 댕글링이라 해놓음
+	//CurrentAnim->GetDataModel()->Skeleton = const_cast<FSkeleton*>(OutPose.Skeleton); // 미친 테스트코드임 지금 Anim Skeleton이 댕글링이라 해놓음
 
-    // ==========================================
-    // Case A: 전환 중이 아님 (단일 애니메이션 재생)
-    // ==========================================
-    if (!bIsTransitioning)
-    {
-       if (CurrentAnim && CurrentAnim->GetDataModel())
-       {
-          FAnimationRuntime::GetPoseFromAnimSequence(CurrentAnim, CurrentAnimTime, OutPose);
-       }
-       return;
-    }
+	// ==========================================
+	// 1. 타겟 포즈 계산
+	// ==========================================
+	FPoseContext TargetPose;
+	if (OutPose.Skeleton) { TargetPose.Initialize(OutPose.Skeleton); }
+	else { TargetPose.LocalSpacePose.SetNum(OutPose.LocalSpacePose.Num()); }
 
-    // ==========================================
-    // Case B: 전환 중 (블렌딩)
-    // ==========================================
-    if (!PreviousNode)
-    {
-        if (CurrentAnim && CurrentAnim->GetDataModel())
-        {
-            FAnimationRuntime::GetPoseFromAnimSequence(CurrentAnim, CurrentAnimTime, OutPose);
-        }
-        return;
-    }
+	if (CurrentAnim)
+	{
+		FAnimationRuntime::GetPoseFromAnimSequence(CurrentAnim, CurrentAnimTime, TargetPose);
+	}
 
-    UAnimSequence* PrevAnim = PreviousNode->AnimationAsset;
-    if (!PrevAnim || !PrevAnim->GetDataModel())
-    {
-        if (CurrentAnim) FAnimationRuntime::GetPoseFromAnimSequence(CurrentAnim, CurrentAnimTime, OutPose);
-        return;
-    }
-    if (!CurrentAnim || !CurrentAnim->GetDataModel())
-    {
-        FAnimationRuntime::GetPoseFromAnimSequence(PrevAnim, PreviousAnimTime, OutPose);
-        return;
-    }
+	// ==========================================
+	// 2. 블렌딩 처리
+	// ==========================================
+	if (!bIsTransitioning)
+	{
+		// 전환 중 아니면 타겟 포즈 그대로 사용
+		OutPose = TargetPose;
+	}
+	else
+	{
+		FPoseContext SourcePose;
+		if (OutPose.Skeleton) { SourcePose.Initialize(OutPose.Skeleton); }
+		else { SourcePose.LocalSpacePose.SetNum(OutPose.LocalSpacePose.Num()); }
 
-    // 두 포즈 샘플링
+		// 인터럽트 상황인가?
+		if (bIsInterruptedBlend && !FrozenSnapshotPose.empty())
+		{
+			if (SourcePose.LocalSpacePose.Num() != FrozenSnapshotPose.size())
+			{
+				// 크기가 다르면 강제로 맞춤 (T-Pose 방지)
+				SourcePose.LocalSpacePose.SetNum(FrozenSnapshotPose.size());
+			}
 
-    // [Target] 현재 상태 포즈
-    FPoseContext CurrentPose;
-    if (OutPose.Skeleton)
-    {
-        CurrentPose.Initialize(OutPose.Skeleton);
-    }
-    else
-    {
-        CurrentPose.LocalSpacePose.SetNum(OutPose.LocalSpacePose.Num());
-    }
+			SourcePose.LocalSpacePose = FrozenSnapshotPose;
+		}
+		else if (PreviousNode && PreviousNode->AnimationAsset)
+		{
+			// 일반 블렌딩
+			FAnimationRuntime::GetPoseFromAnimSequence(PreviousNode->AnimationAsset, PreviousAnimTime, SourcePose);
+		}
 
-    FAnimationRuntime::GetPoseFromAnimSequence(CurrentAnim, CurrentAnimTime, CurrentPose);
+		// Source -> Target 블렌딩
+		FAnimationRuntime::BlendTwoPosesTogether(SourcePose, TargetPose, TransitionAlpha, OutPose);
+	}
 
-    // [Source] 이전 상태 포즈
-    FPoseContext PreviousPose;
-    if (OutPose.Skeleton)
-    {
-        PreviousPose.Initialize(OutPose.Skeleton);
-    }
-    else
-    {
-        PreviousPose.LocalSpacePose.SetNum(OutPose.LocalSpacePose.Num());
-    }
-
-    FAnimationRuntime::GetPoseFromAnimSequence(PrevAnim, PreviousAnimTime, PreviousPose);
-
-    // 최종 블렌딩 (Source -> Target)
-    float BlendAlpha = TransitionAlpha;
-    FAnimationRuntime::BlendTwoPosesTogether(PreviousPose, CurrentPose, BlendAlpha, OutPose);
+	// ==========================================
+	// 3. 다음 프레임을 위해 현재 포즈 백업 (스냅샷)
+	// ==========================================
+	LastFramePose = OutPose.LocalSpacePose;
 }
 
 void FAnimNode_StateMachine::TransitionTo(FName NewStateName, float BlendTime)
@@ -158,29 +143,50 @@ void FAnimNode_StateMachine::TransitionTo(FName NewStateName, float BlendTime)
 	const FAnimStateNode* NextNode = StateMachineAsset->FindNode(NewStateName);
 	if (!NextNode) { return; }
 
-	PreviousStateName = CurrentStateName;
-	PreviousNode = ActiveNode;
-	PreviousAnimTime = CurrentAnimTime;
-
-	CurrentStateName = NewStateName;
-	ActiveNode = NextNode;
-	CurrentAnimTime = 0.0f;
-
-	if (BlendTime > 0.0f)
+	// [Case 1: 인터럽트 발생] (이미 전환 중일 때)
+	if (bIsTransitioning)
 	{
-		bIsTransitioning = true;
+		// 목적지 변경
+		CurrentStateName = NewStateName;
+		ActiveNode = NextNode;
+		CurrentAnimTime = 0.0f;
+
+		FrozenSnapshotPose = LastFramePose;
+		bIsInterruptedBlend = true;
+
+		// 알파를 0으로 초기화해도, Source가 '방금 전 모습'이라서 튀지 않음
 		CurrentTransitionDuration = BlendTime;
 		TransitionAlpha = 0.0f;
 	}
+	// [Case 2: 일반 전환]
 	else
 	{
-		bIsTransitioning = false;
+		PreviousNode = ActiveNode;
+		PreviousAnimTime = CurrentAnimTime;
+
+		CurrentStateName = NewStateName;
+		ActiveNode = NextNode;
+		CurrentAnimTime = 0.0f;
+
+		// 일반 전환이므로 스냅샷 안 씀 (PreviousNode 애니메이션 사용)
+		bIsInterruptedBlend = false;
+
+		if (BlendTime > 0.0f)
+		{
+			bIsTransitioning = true;
+			CurrentTransitionDuration = BlendTime;
+			TransitionAlpha = 0.0f;
+		}
+		else
+		{
+			bIsTransitioning = false;
+		}
 	}
 }
 
 void FAnimNode_StateMachine::CheckTransitions()
 {
-	if (!ActiveNode || bIsTransitioning) return;
+	if (!ActiveNode) return;
 
 	// AnimInstance가 없으면 변수를 못 읽으니 중단
 	if (!OwnerAnimInstance) return;

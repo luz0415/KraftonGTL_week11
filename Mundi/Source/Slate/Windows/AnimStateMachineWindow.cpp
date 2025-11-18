@@ -910,7 +910,7 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
             }
         }
     }
-    // Transition (Link) 선택 시
+	// Transition (Link) 선택 시
     else if (ActiveState->SelectedLinkID)
     {
         FGraphLink* SelectedLink = FindLink(ActiveState, ActiveState->SelectedLinkID);
@@ -921,38 +921,66 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
 
             ImGui::Spacing();
             ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-            ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "Transition");
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "Transition Details");
             ImGui::PopFont();
             ImGui::Separator();
             ImGui::Spacing();
 
-            if (FromNode && ToNode)
+            if (FromNode && ToNode && ActiveState->StateMachine)
             {
+                // 1. 기본 정보 표시
                 ImGui::Text("From: %s", FromNode->Name.c_str());
-                ImGui::Text("To: %s", ToNode->Name.c_str());
+                ImGui::Text("To:   %s", ToNode->Name.c_str());
+
+                ImGui::Spacing();
+
+                // 2. [New] 우선순위(Priority) 표시 및 변경 버튼
+                int32 CurrentPriority = ActiveState->StateMachine->GetTransitionPriority(FName(FromNode->Name), FName(ToNode->Name));
+
+                ImGui::AlignTextToFramePadding(); // 텍스트와 버튼 수직 정렬 맞춤
+                ImGui::Text("Priority: %d", CurrentPriority);
+                ImGui::SameLine();
+
+                // (Tip) 0번이 최상위이므로 낮은 숫자가 높은 우선순위임을 툴팁으로 알려주면 좋음
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Lower index means higher priority (checked first).");
+
+                // 오른쪽 정렬 느낌을 위해 커서 이동 (선택 사항)
+                // ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 80);
+
+                // [위로 이동 버튼] (인덱스 감소)
+                if (ImGui::ArrowButton("##TransUp", ImGuiDir_Up))
+                {
+                    // -1: 인덱스를 줄임 = 배열 앞쪽으로 이동 = 우선순위 상승
+                    ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), -1);
+                }
+
+                ImGui::SameLine();
+
+                // [아래로 이동 버튼] (인덱스 증가)
+                if (ImGui::ArrowButton("##TransDown", ImGuiDir_Down))
+                {
+                    // +1: 인덱스를 늘림 = 배열 뒤쪽으로 이동 = 우선순위 하락
+                    ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), 1);
+                }
+
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                // Blend Time
+                // 3. Blend Time (기존 코드)
                 float blendTime = SelectedLink->BlendTime;
                 if (ImGui::DragFloat("Blend Time", &blendTime, 0.01f, 0.0f, 5.0f))
                 {
                     SelectedLink->BlendTime = blendTime;
-
-                    // StateMachine에 반영
-                    if (ActiveState->StateMachine)
+                    // 데이터 갱신
+                    if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(FName(FromNode->Name)))
                     {
-                        FName fromName(FromNode->Name);
-                        FName toName(ToNode->Name);
-                        if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(fromName))
+                        for (auto& Trans : StateNode->Transitions)
                         {
-                            for (auto& Trans : StateNode->Transitions)
+                            if (Trans.TargetStateName == FName(ToNode->Name))
                             {
-                                if (Trans.TargetStateName == toName)
-                                {
-                                    Trans.BlendTime = blendTime;
-                                    break;
-                                }
+                                Trans.BlendTime = blendTime;
+                                break;
                             }
                         }
                     }

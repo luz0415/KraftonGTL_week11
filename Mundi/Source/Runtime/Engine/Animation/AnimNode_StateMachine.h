@@ -92,6 +92,12 @@ protected:
 	/** 이전 노드 포인터 */
 	const FAnimStateNode* PreviousNode;
 
+	// ===== Interrupt Section =====
+	TArray<FTransform> LastFramePose;
+	TArray<FTransform> FrozenSnapshotPose;
+	bool bIsInterruptedBlend;
+
+	// ===== Transition Section =====
 	bool bIsTransitioning;
 	float TransitionAlpha;    // 0.0 ~ 1.0
 	float CurrentTransitionDuration; // 블렌딩 시간

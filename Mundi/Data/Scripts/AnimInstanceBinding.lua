@@ -42,7 +42,7 @@ function Tick(dt)
         local speed = math.sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y + velocity.Z * velocity.Z)
 
         -- 디버깅용 (필요시 주석 해제)
-        print("Current Speed:", speed)
+        -- print("Current Speed:", speed)
 
         AnimInstance:SetFloat("Speed", speed)
     end
