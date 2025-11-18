@@ -145,3 +145,22 @@ void UAnimSequenceBase::ClearNotifies()
 {
 	Notifies.clear();
 }
+
+/**
+ * @brief PIE용 SubObject 복제 (Notifies 깊은 복사)
+ */
+void UAnimSequenceBase::DuplicateSubObjects()
+{
+	Super::DuplicateSubObjects();
+
+	// Notifies 배열 깊은 복사 (TArray 대입 연산자가 깊은 복사 수행)
+	TArray<FAnimNotifyEvent> NotifiesCopy = Notifies;
+	Notifies = NotifiesCopy;
+
+	// DataModel 복제 (UObject이므로 Duplicate() 호출)
+	if (DataModel)
+	{
+		UAnimDataModel* NewDataModel = Cast<UAnimDataModel>(DataModel->Duplicate());
+		DataModel = NewDataModel;
+	}
+}

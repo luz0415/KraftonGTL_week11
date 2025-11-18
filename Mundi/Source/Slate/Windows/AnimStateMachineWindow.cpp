@@ -1142,7 +1142,7 @@ void SAnimStateMachineWindow::CreateNode_State(FGraphState* State)
 
     // 위치 설정 (약간씩 떨어뜨려서 생성)
     ed::SetCurrentEditor(State->Context);
-    ed::SetNodePosition(Node.ID, ImVec2(100 + State->StateCounter * 50, 100 + State->StateCounter * 50));
+    ed::SetNodePosition(Node.ID, ImVec2(100.0f + State->StateCounter * 50.0f, 100.0f + State->StateCounter * 50.0f));
     ed::SetCurrentEditor(nullptr);
 }
 
@@ -1262,10 +1262,10 @@ void SAnimStateMachineWindow::SyncGraphFromStateMachine(FGraphState* State)
         else
         {
             // 저장된 위치가 없으면 그리드 형태로 배치
-            int nodeIndex = State->Nodes.size() - 1;
-            int row = nodeIndex / 3;
-            int col = nodeIndex % 3;
-            ed::SetNodePosition(Node.ID, ImVec2(100 + col * 300, 100 + row * 250));
+            int32 nodeIndex = static_cast<int32>(State->Nodes.size() - 1);
+            int32 row = nodeIndex / 3;
+            int32 col = nodeIndex % 3;
+            ed::SetNodePosition(Node.ID, ImVec2(100.0f + col * 300.0f, 100.0f + row * 250.0f));
         }
     }
 

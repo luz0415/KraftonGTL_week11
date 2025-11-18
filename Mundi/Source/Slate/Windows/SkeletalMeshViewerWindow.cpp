@@ -18,6 +18,8 @@
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Runtime/Engine/Animation/AnimDataModel.h"
 #include "Source/Runtime/InputCore/InputManager.h"
+#include "Source/Runtime/Core/Misc/WindowsBinWriter.h"
+#include "Source/Runtime/Core/Misc/Archive.h"
 #include <cmath> // for fmod
 
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
@@ -1205,6 +1207,140 @@ void SSkeletalMeshViewerWindow::OnRender()
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
             ImGui::Text("Animation List");
             ImGui::PopStyleColor();
+
+            // Save Animation 버튼 (Animation List 헤더 우측)
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.50f, 0.70f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.60f, 0.80f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.40f, 0.60f, 1.0f));
+
+            bool bCanSave = (ActiveState->CurrentAnimation != nullptr);
+            if (!bCanSave)
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+            }
+
+            if (ImGui::SmallButton("Save") && bCanSave)
+            {
+                UAnimSequence* AnimToSave = ActiveState->CurrentAnimation;
+                if (AnimToSave)
+                {
+                    // 파일명 생성: FilePath에서 추출 (UE 패턴)
+                    FString FilePath = AnimToSave->GetFilePath();
+                    FString FileName;
+
+                    // FilePath 형식: "path/to/file.fbx#AnimStackName" 또는 "path/to/file.anim"
+                    if (FilePath.ends_with(".anim"))
+                    {
+                        // 이미 .anim 파일에서 로드된 경우: 기존 경로 사용
+                        size_t LastSlash = FilePath.find_last_of("/\\");
+                        if (LastSlash != FString::npos)
+                        {
+                            FileName = FilePath.substr(LastSlash + 1);
+                            // 확장자 제거
+                            size_t DotPos = FileName.find_last_of('.');
+                            if (DotPos != FString::npos)
+                            {
+                                FileName = FileName.substr(0, DotPos);
+                            }
+                        }
+                        else
+                        {
+                            FileName = AnimToSave->GetName();
+                        }
+                    }
+                    else
+                    {
+                        // FBX에서 임포트된 경우: BaseName_AnimStackName 형식
+                        size_t HashPos = FilePath.find('#');
+                        if (HashPos != FString::npos)
+                        {
+                            FString FbxPath = FilePath.substr(0, HashPos);
+                            FString AnimStackName = FilePath.substr(HashPos + 1);
+
+                            // FBX 파일명 추출
+                            size_t LastSlash = FbxPath.find_last_of("/\\");
+                            FString BaseName;
+                            if (LastSlash != FString::npos)
+                            {
+                                BaseName = FbxPath.substr(LastSlash + 1);
+                            }
+                            else
+                            {
+                                BaseName = FbxPath;
+                            }
+
+                            // 확장자 제거
+                            size_t DotPos = BaseName.find_last_of('.');
+                            if (DotPos != FString::npos)
+                            {
+                                BaseName = BaseName.substr(0, DotPos);
+                            }
+
+                            // UE 패턴: BaseName_AnimStackName
+                            FileName = BaseName + "_" + AnimStackName;
+                        }
+                        else
+                        {
+                            // Fallback: AnimSequence 이름 사용
+                            FileName = AnimToSave->GetName();
+                        }
+                    }
+
+                    // 저장 경로: Data/Animation/{FileName}.anim
+                    FString SaveDirectory = "Data/Animation/";
+                    FString SavePath = SaveDirectory + FileName + ".anim";
+
+                    // 디렉토리 생성
+                    std::filesystem::path DirPath(SaveDirectory);
+                    if (!std::filesystem::exists(DirPath))
+                    {
+                        std::filesystem::create_directories(DirPath);
+                    }
+
+                    // 파일 저장 (FBXLoader 패턴과 동일)
+                    try
+                    {
+                        FWindowsBinWriter Writer(SavePath);
+
+                        // Name 저장
+                        Serialization::WriteString(Writer, AnimToSave->GetName());
+
+                        // Notifies 저장
+                        uint32 NotifyCount = static_cast<uint32>(AnimToSave->Notifies.Num());
+                        Writer << NotifyCount;
+                        for (FAnimNotifyEvent& Notify : AnimToSave->Notifies)
+                        {
+                            Writer << Notify;
+                        }
+
+                        // DataModel 저장
+                        if (UAnimDataModel* DataModel = AnimToSave->GetDataModel())
+                        {
+                            Writer << *DataModel;
+                        }
+
+                        Writer.Close();
+
+                        // FilePath를 .anim 파일 경로로 업데이트 (Scene 저장 시 .anim 경로가 저장되도록)
+                        AnimToSave->SetFilePath(SavePath);
+
+                        UE_LOG("SkeletalMeshViewer: SaveAnimation: Saved to %s", SavePath.c_str());
+                    }
+                    catch (const std::exception& e)
+                    {
+                        UE_LOG("SkeletalMeshViewer: SaveAnimation: Failed - %s", e.what());
+                    }
+                }
+            }
+
+            if (!bCanSave)
+            {
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::PopStyleColor(3);
+
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -1705,7 +1841,7 @@ void SSkeletalMeshViewerWindow::LoadSkeletalMesh(const FString& Path)
             ActiveState->bIsPlaying = true;
         }
 
-        UE_LOG("SSkeletalMeshViewerWindow: Loaded skeletal mesh from %s", Path.c_str());
+        UE_LOG("SSkeletalMeshViewerWindow: LoadSkeletalMesh: Loaded %s (%d animations)", Path.c_str(), Animations.Num());
     }
     else
     {
