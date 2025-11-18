@@ -125,6 +125,14 @@ public:
 	float XAxisBlendWeight;  // X축 가중치 (1.0 = 정상, 높을수록 X축이 더 중요)
 	float YAxisBlendWeight;  // Y축 가중치 (1.0 = 정상, 높을수록 Y축이 더 중요)
 
+	// ===== Sync Group =====
+	FString SyncGroupName;         // Sync Group 이름 (같은 그룹끼리 동기화)
+	bool bUseSyncMarkers;          // Sync Marker 기반 동기화 사용 여부
+
+	// ===== 에디터 설정 (저장용) =====
+	FVector2D EditorPreviewParameter;  // 에디터 프리뷰 파라미터
+	FString EditorSkeletalMeshPath;    // 에디터에서 사용하는 Skeletal Mesh 경로
+
 	// ===== 샘플 포인트 =====
 	TArray<FBlendSample> Samples;
 

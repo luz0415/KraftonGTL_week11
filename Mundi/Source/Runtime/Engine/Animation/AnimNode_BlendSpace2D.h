@@ -92,4 +92,9 @@ private:
 	 * @brief Movement 상태에서 블렌드 파라미터 자동 계산
 	 */
 	void CalculateBlendParameterFromMovement();
+
+	/**
+	 * @brief Sync Marker 기반으로 Follower 애니메이션 동기화
+	 */
+	void SyncFollowersWithMarkers(int32 LeaderIndex, float LeaderTime, float DeltaSeconds);
 };

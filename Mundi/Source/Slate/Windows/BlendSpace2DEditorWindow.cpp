@@ -15,6 +15,7 @@
 #include"FViewportClient.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Math.h"
+#include <commdlg.h>  // Windows 파일 다이얼로그
 
 SBlendSpace2DEditorWindow::SBlendSpace2DEditorWindow()
 	: CanvasPos(ImVec2(0, 0))
@@ -77,6 +78,47 @@ void SBlendSpace2DEditorWindow::SetBlendSpace(UBlendSpace2D* InBlendSpace)
 	{
 		PreviewParameter.X = (EditingBlendSpace->XAxisMin + EditingBlendSpace->XAxisMax) * 0.5f;
 		PreviewParameter.Y = (EditingBlendSpace->YAxisMin + EditingBlendSpace->YAxisMax) * 0.5f;
+
+		// 저장된 스켈레톤 메시 경로가 있으면 자동으로 로드
+		if (!EditingBlendSpace->EditorSkeletalMeshPath.empty())
+		{
+			USkeletalMesh* SavedMesh = UResourceManager::GetInstance().Get<USkeletalMesh>(EditingBlendSpace->EditorSkeletalMeshPath);
+			if (SavedMesh)
+			{
+				// 애니메이션 목록 초기화
+				AvailableAnimations.clear();
+
+				// 스켈레톤 메시의 애니메이션 추가
+				const TArray<UAnimSequence*>& Animations = SavedMesh->GetAnimations();
+				for (UAnimSequence* Anim : Animations)
+				{
+					if (Anim)
+					{
+						AvailableAnimations.Add(Anim);
+					}
+				}
+
+				// 프리뷰 메시 설정
+				if (PreviewState && PreviewState->PreviewActor)
+				{
+					PreviewState->PreviewActor->SetSkeletalMesh(EditingBlendSpace->EditorSkeletalMeshPath);
+					PreviewState->CurrentMesh = SavedMesh;
+					if (auto* SkelComp = PreviewState->PreviewActor->GetSkeletalMeshComponent())
+					{
+						SkelComp->SetVisibility(true);
+					}
+				}
+
+				UE_LOG("Loaded %d animations from saved SkeletalMesh: %s",
+					Animations.Num(),
+					EditingBlendSpace->EditorSkeletalMeshPath.c_str());
+			}
+			else
+			{
+				UE_LOG("Warning: Failed to load saved SkeletalMesh: %s",
+					EditingBlendSpace->EditorSkeletalMeshPath.c_str());
+			}
+		}
 	}
 }
 
@@ -85,6 +127,15 @@ void SBlendSpace2DEditorWindow::OnRender()
 	if (!bIsOpen)
 	{
 		return;
+	}
+
+	// 첫 프레임에만 윈도우 크기 설정
+	static bool bFirstFrame = true;
+	if (bFirstFrame)
+	{
+		ImGui::SetNextWindowSize(ImVec2(1600.0f, 1000.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(160.0f, 90.0f), ImGuiCond_FirstUseEver);
+		bFirstFrame = false;
 	}
 
 	if (!EditingBlendSpace)
@@ -321,38 +372,41 @@ void SBlendSpace2DEditorWindow::RenderTriangulation()
 
 void SBlendSpace2DEditorWindow::RenderToolbar()
 {
-	static char SavePath[256] = "Data/Animation/MyBlendSpace.blend2d";
-	static char LoadPath[256] = "Data/Animation/MyBlendSpace.blend2d";
-
 	// 저장 버튼
 	if (ImGui::Button("Save"))
 	{
 		if (EditingBlendSpace)
 		{
-			ImGui::OpenPopup("Save BlendSpace");
-		}
-	}
+			// Windows 파일 저장 다이얼로그
+			OPENFILENAMEA ofn;
+			char szFile[260] = { 0 };
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = NULL;
+			ofn.lpstrFile = szFile;
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = "BlendSpace2D Files (*.blend2d)\0*.blend2d\0All Files (*.*)\0*.*\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = "Data\\Animation";
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+			ofn.lpstrDefExt = "blend2d";
 
-	// 저장 팝업
-	if (ImGui::BeginPopupModal("Save BlendSpace", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-	{
-		ImGui::Text("Save BlendSpace2D to file:");
-		ImGui::InputText("Path", SavePath, sizeof(SavePath));
-
-		if (ImGui::Button("Save", ImVec2(120, 0)))
-		{
-			if (EditingBlendSpace)
+			if (GetSaveFileNameA(&ofn) == TRUE)
 			{
-				EditingBlendSpace->SaveToFile(SavePath);
+				// 현재 프리뷰 상태 저장
+				EditingBlendSpace->EditorPreviewParameter = PreviewParameter;
+
+				// 현재 사용 중인 스켈레톤 메시 경로 저장
+				if (PreviewState && PreviewState->CurrentMesh)
+				{
+					EditingBlendSpace->EditorSkeletalMeshPath = PreviewState->CurrentMesh->GetFilePath();
+				}
+
+				EditingBlendSpace->SaveToFile(ofn.lpstrFile);
 			}
-			ImGui::CloseCurrentPopup();
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120, 0)))
-		{
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::EndPopup();
 	}
 
 	ImGui::SameLine();
@@ -360,30 +414,29 @@ void SBlendSpace2DEditorWindow::RenderToolbar()
 	// 로드 버튼
 	if (ImGui::Button("Load"))
 	{
-		ImGui::OpenPopup("Load BlendSpace");
-	}
+		// Windows 파일 열기 다이얼로그
+		OPENFILENAMEA ofn;
+		char szFile[260] = { 0 };
+		ZeroMemory(&ofn, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = NULL;
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = sizeof(szFile);
+		ofn.lpstrFilter = "BlendSpace2D Files (*.blend2d)\0*.blend2d\0All Files (*.*)\0*.*\0";
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = "Data\\Animation";
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-	// 로드 팝업
-	if (ImGui::BeginPopupModal("Load BlendSpace", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-	{
-		ImGui::Text("Load BlendSpace2D from file:");
-		ImGui::InputText("Path", LoadPath, sizeof(LoadPath));
-
-		if (ImGui::Button("Load", ImVec2(120, 0)))
+		if (GetOpenFileNameA(&ofn) == TRUE)
 		{
-			UBlendSpace2D* LoadedBS = UBlendSpace2D::LoadFromFile(LoadPath);
+			UBlendSpace2D* LoadedBS = UBlendSpace2D::LoadFromFile(ofn.lpstrFile);
 			if (LoadedBS)
 			{
 				SetBlendSpace(LoadedBS);
 			}
-			ImGui::CloseCurrentPopup();
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120, 0)))
-		{
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::EndPopup();
 	}
 
 	ImGui::SameLine();
@@ -487,6 +540,44 @@ void SBlendSpace2DEditorWindow::RenderProperties()
 		ImGui::Text("Animation");
 		if (Sample.Animation)
 		{
+			ImGui::Text("Name: %s", Sample.Animation->GetName().c_str());
+
+			// Sync Markers 섹션
+			ImGui::Separator();
+			ImGui::Text("Sync Markers (%d)", Sample.Animation->GetSyncMarkers().Num());
+
+			// Sync Marker 목록
+			const TArray<FAnimSyncMarker>& Markers = Sample.Animation->GetSyncMarkers();
+			for (int32 m = 0; m < Markers.Num(); ++m)
+			{
+				const FAnimSyncMarker& Marker = Markers[m];
+				ImGui::Text("  [%d] %s @ %.3fs", m, Marker.MarkerName.c_str(), Marker.Time);
+
+				ImGui::SameLine();
+				char DeleteLabel[64];
+				sprintf_s(DeleteLabel, "X##Marker%d", m);
+				if (ImGui::SmallButton(DeleteLabel))
+				{
+					Sample.Animation->RemoveSyncMarker(m);
+				}
+			}
+
+			// Sync Marker 추가
+			static char MarkerNameBuffer[128] = "LeftFoot";
+			static float MarkerTime = 0.0f;
+
+			ImGui::Separator();
+			ImGui::Text("Add Sync Marker");
+			ImGui::InputText("Marker Name##AddMarker", MarkerNameBuffer, 128);
+			ImGui::InputFloat("Time (sec)##AddMarker", &MarkerTime, 0.1f, 1.0f, "%.3f");
+
+			if (ImGui::Button("Add Marker"))
+			{
+				Sample.Animation->AddSyncMarker(MarkerNameBuffer, MarkerTime);
+			}
+
+			ImGui::Separator();
+
 			ImGui::TextColored(ImVec4(0.7f, 0.9f, 0.7f, 1.0f),
 				"%s", Sample.Animation->GetName().c_str());
 			ImGui::Text("Duration: %.2fs", Sample.Animation->GetPlayLength());
@@ -520,6 +611,40 @@ void SBlendSpace2DEditorWindow::RenderProperties()
 		ImGui::SliderFloat("Y Weight", &EditingBlendSpace->YAxisBlendWeight, 0.1f, 3.0f, "%.2f");
 		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
 			"Higher = more important");
+
+		ImGui::Separator();
+
+		// Sync Group 설정
+		ImGui::Text("Sync Group");
+
+		// Sync Marker 사용 체크박스
+		ImGui::Checkbox("Use Sync Markers", &EditingBlendSpace->bUseSyncMarkers);
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+			"Sync animations using markers");
+
+		// Sync Group 이름
+		static char SyncGroupBuffer[128] = "Default";
+		if (EditingBlendSpace->SyncGroupName.length() < 128)
+		{
+			strcpy_s(SyncGroupBuffer, EditingBlendSpace->SyncGroupName.c_str());
+		}
+
+		if (ImGui::InputText("Group Name", SyncGroupBuffer, 128))
+		{
+			EditingBlendSpace->SyncGroupName = SyncGroupBuffer;
+		}
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+			"Animations in same group sync together");
+
+		ImGui::Separator();
+
+		// Delaunay 삼각분할 정보
+		ImGui::Text("Triangulation");
+		ImGui::Text("Triangles: %d", EditingBlendSpace->Triangles.Num());
+		if (ImGui::Button("Regenerate Triangulation"))
+		{
+			EditingBlendSpace->GenerateTriangulation();
+		}
 
 		ImGui::Separator();
 
@@ -963,6 +1088,12 @@ void SBlendSpace2DEditorWindow::RenderAnimationList()
 						{
 							SkelComp->SetVisibility(true);
 						}
+					}
+
+					// BlendSpace에 스켈레톤 메시 경로 저장
+					if (EditingBlendSpace)
+					{
+						EditingBlendSpace->EditorSkeletalMeshPath = Mesh->GetFilePath();
 					}
 
 					UE_LOG("Loaded %d animations from SkeletalMesh: %s", Animations.Num(), Mesh->GetName().c_str());

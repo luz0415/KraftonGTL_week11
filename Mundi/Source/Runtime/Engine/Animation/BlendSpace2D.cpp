@@ -14,6 +14,10 @@ UBlendSpace2D::UBlendSpace2D()
 	, YAxisName("Y")
 	, XAxisBlendWeight(1.0f)
 	, YAxisBlendWeight(1.0f)
+	, SyncGroupName("Default")
+	, bUseSyncMarkers(false)
+	, EditorPreviewParameter(FVector2D::Zero())
+	, EditorSkeletalMeshPath("")
 {
 }
 
@@ -39,6 +43,13 @@ void UBlendSpace2D::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadString(InOutHandle, "YAxisName", YAxisName, "Y");
 		FJsonSerializer::ReadFloat(InOutHandle, "XAxisBlendWeight", XAxisBlendWeight, 1.0f);
 		FJsonSerializer::ReadFloat(InOutHandle, "YAxisBlendWeight", YAxisBlendWeight, 1.0f);
+		FJsonSerializer::ReadString(InOutHandle, "SyncGroupName", SyncGroupName, "Default");
+		FJsonSerializer::ReadBool(InOutHandle, "bUseSyncMarkers", bUseSyncMarkers, false);
+
+		// 에디터 설정 로드
+		FJsonSerializer::ReadFloat(InOutHandle, "EditorPreviewParameterX", EditorPreviewParameter.X, 0.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "EditorPreviewParameterY", EditorPreviewParameter.Y, 0.0f);
+		FJsonSerializer::ReadString(InOutHandle, "EditorSkeletalMeshPath", EditorSkeletalMeshPath, "");
 
 		// 샘플 포인트 로드
 		Samples.Empty();
@@ -57,14 +68,73 @@ void UBlendSpace2D::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				FJsonSerializer::ReadFloat(SampleJson, "PositionY", Sample.Position.Y, 0.0f);
 				FJsonSerializer::ReadFloat(SampleJson, "RateScale", Sample.RateScale, 1.0f);
 
-				// 애니메이션 경로로 로드 (TODO: ResourceManager 통합)
+				// 애니메이션 경로로 로드
 				FString AnimPath;
 				FJsonSerializer::ReadString(SampleJson, "AnimationPath", AnimPath, "");
-				// Sample.Animation = LoadAnimSequence(AnimPath);
-				// 지금은 nullptr (나중에 ResourceManager에서 로드)
-				Sample.Animation = nullptr;
+
+				if (!AnimPath.empty())
+				{
+					// ResourceManager에서 로드 시도
+					Sample.Animation = UResourceManager::GetInstance().Get<UAnimSequence>(AnimPath);
+
+					if (!Sample.Animation)
+					{
+						UE_LOG("Warning: Failed to load animation '%s' for BlendSpace sample", AnimPath.c_str());
+					}
+					else
+					{
+						// Sync Markers 로드
+						int32 MarkerCount = 0;
+						FJsonSerializer::ReadInt32(SampleJson, "SyncMarkerCount", MarkerCount, 0);
+
+						for (int32 m = 0; m < MarkerCount; ++m)
+						{
+							FString MarkerKey = "SyncMarker_" + std::to_string(m);
+							JSON MarkerJson;
+
+							if (FJsonSerializer::ReadObject(SampleJson, MarkerKey.c_str(), MarkerJson, JSON::Make(JSON::Class::Object)))
+							{
+								FString MarkerName;
+								float MarkerTime = 0.0f;
+
+								FJsonSerializer::ReadString(MarkerJson, "Name", MarkerName, "");
+								FJsonSerializer::ReadFloat(MarkerJson, "Time", MarkerTime, 0.0f);
+
+								Sample.Animation->AddSyncMarker(MarkerName, MarkerTime);
+							}
+						}
+					}
+				}
+				else
+				{
+					Sample.Animation = nullptr;
+				}
 
 				Samples.Add(Sample);
+			}
+		}
+
+		// Triangles 로드
+		Triangles.Empty();
+		int32 TriangleCount = 0;
+		FJsonSerializer::ReadInt32(InOutHandle, "TriangleCount", TriangleCount, 0);
+
+		for (int32 i = 0; i < TriangleCount; ++i)
+		{
+			FString TriKey = "Triangle_" + std::to_string(i);
+			JSON TriJson;
+
+			if (FJsonSerializer::ReadObject(InOutHandle, TriKey.c_str(), TriJson, JSON::Make(JSON::Class::Object)))
+			{
+				FBlendTriangle Tri;
+				FJsonSerializer::ReadInt32(TriJson, "Index0", Tri.Index0, -1);
+				FJsonSerializer::ReadInt32(TriJson, "Index1", Tri.Index1, -1);
+				FJsonSerializer::ReadInt32(TriJson, "Index2", Tri.Index2, -1);
+
+				if (Tri.IsValid())
+				{
+					Triangles.Add(Tri);
+				}
 			}
 		}
 	}
@@ -79,6 +149,13 @@ void UBlendSpace2D::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["YAxisName"] = YAxisName;
 		InOutHandle["XAxisBlendWeight"] = XAxisBlendWeight;
 		InOutHandle["YAxisBlendWeight"] = YAxisBlendWeight;
+		InOutHandle["SyncGroupName"] = SyncGroupName;
+		InOutHandle["bUseSyncMarkers"] = bUseSyncMarkers;
+
+		// 에디터 설정 저장
+		InOutHandle["EditorPreviewParameterX"] = EditorPreviewParameter.X;
+		InOutHandle["EditorPreviewParameterY"] = EditorPreviewParameter.Y;
+		InOutHandle["EditorSkeletalMeshPath"] = EditorSkeletalMeshPath;
 
 		// 샘플 포인트 저장
 		InOutHandle["SampleCount"] = static_cast<int>(Samples.Num());
@@ -92,18 +169,53 @@ void UBlendSpace2D::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			SampleJson["PositionY"] = Sample.Position.Y;
 			SampleJson["RateScale"] = Sample.RateScale;
 
-			// 애니메이션 경로 저장
+			// 애니메이션 경로 저장 (파일 경로 전체 저장)
 			if (Sample.Animation)
 			{
-				SampleJson["AnimationPath"] = Sample.Animation->GetName();
+				FString AnimPath = Sample.Animation->GetFilePath();
+				if (AnimPath.empty())
+				{
+					AnimPath = Sample.Animation->GetName(); // Fallback
+				}
+				SampleJson["AnimationPath"] = AnimPath;
+
+				// Sync Markers도 저장
+				const TArray<FAnimSyncMarker>& Markers = Sample.Animation->GetSyncMarkers();
+				SampleJson["SyncMarkerCount"] = static_cast<int>(Markers.Num());
+
+				for (int32 m = 0; m < Markers.Num(); ++m)
+				{
+					JSON MarkerJson = JSON::Make(JSON::Class::Object);
+					MarkerJson["Name"] = Markers[m].MarkerName;
+					MarkerJson["Time"] = Markers[m].Time;
+
+					FString MarkerKey = "SyncMarker_" + std::to_string(m);
+					SampleJson[MarkerKey] = MarkerJson;
+				}
 			}
 			else
 			{
 				SampleJson["AnimationPath"] = "";
+				SampleJson["SyncMarkerCount"] = 0;
 			}
 
 			FString Key = "Sample_" + std::to_string(i);
 			InOutHandle[Key] = SampleJson;
+		}
+
+		// Triangles 저장
+		InOutHandle["TriangleCount"] = static_cast<int>(Triangles.Num());
+		for (int32 i = 0; i < Triangles.Num(); ++i)
+		{
+			const FBlendTriangle& Tri = Triangles[i];
+			JSON TriJson = JSON::Make(JSON::Class::Object);
+
+			TriJson["Index0"] = Tri.Index0;
+			TriJson["Index1"] = Tri.Index1;
+			TriJson["Index2"] = Tri.Index2;
+
+			FString TriKey = "Triangle_" + std::to_string(i);
+			InOutHandle[TriKey] = TriJson;
 		}
 	}
 }

@@ -161,18 +161,27 @@ void FAnimNode_BlendSpace2D::Update(float DeltaSeconds)
 	NormalizedTime = (ReferenceDuration > 0.0f) ? (SampleAnimTimes[ReferenceSampleIndex] / ReferenceDuration) : 0.0f;
 
 	// Step 3: 나머지 샘플들을 기준 샘플과 동기화
-	for (int32 i = 0; i < NumSamples; ++i)
+	if (BlendSpace->bUseSyncMarkers)
 	{
-		if (i == ReferenceSampleIndex)
+		// Sync Marker 기반 동기화
+		SyncFollowersWithMarkers(ReferenceSampleIndex, SampleAnimTimes[ReferenceSampleIndex], DeltaSeconds);
+	}
+	else
+	{
+		// 기본 정규화된 시간 동기화
+		for (int32 i = 0; i < NumSamples; ++i)
 		{
-			continue; // 이미 업데이트함
-		}
+			if (i == ReferenceSampleIndex)
+			{
+				continue; // 이미 업데이트함
+			}
 
-		const FBlendSample& Sample = BlendSpace->Samples[i];
-		if (Sample.Animation && Sample.Animation->GetDataModel())
-		{
-			float Duration = Sample.Animation->GetDataModel()->GetPlayLength();
-			SampleAnimTimes[i] = NormalizedTime * Duration;
+			const FBlendSample& Sample = BlendSpace->Samples[i];
+			if (Sample.Animation && Sample.Animation->GetDataModel())
+			{
+				float Duration = Sample.Animation->GetDataModel()->GetPlayLength();
+				SampleAnimTimes[i] = NormalizedTime * Duration;
+			}
 		}
 	}
 
@@ -296,5 +305,92 @@ void FAnimNode_BlendSpace2D::CalculateBlendParameterFromMovement()
 	if (LogCounter++ % 60 == 0)
 	{
 		UE_LOG("[BlendSpace2D] Speed=%.1f, Angle=%.1f", Speed, Angle);
+	}
+}
+
+/**
+ * @brief Sync Marker 기반으로 Follower 애니메이션 동기화
+ *
+ * Leader 애니메이션의 Sync Marker를 기준으로 Follower들을 동기화합니다.
+ * 예: Leader가 "LeftFoot" 마커를 지나면, Follower도 자기의 "LeftFoot" 마커로 맞춤
+ */
+void FAnimNode_BlendSpace2D::SyncFollowersWithMarkers(int32 LeaderIndex, float LeaderTime, float DeltaSeconds)
+{
+	if (!BlendSpace || LeaderIndex < 0 || LeaderIndex >= BlendSpace->Samples.Num())
+	{
+		return;
+	}
+
+	const FBlendSample& LeaderSample = BlendSpace->Samples[LeaderIndex];
+	if (!LeaderSample.Animation)
+	{
+		return;
+	}
+
+	// Leader의 현재 시간 범위에서 Sync Marker 찾기
+	float PrevTime = LeaderTime - DeltaSeconds;
+	if (PrevTime < 0.0f) PrevTime = 0.0f;
+
+	TArray<FAnimSyncMarker> PassedMarkers;
+	LeaderSample.Animation->FindSyncMarkersInRange(PrevTime, LeaderTime, PassedMarkers);
+
+	// 이번 프레임에 지나간 Sync Marker가 있으면 Follower들 동기화
+	if (PassedMarkers.Num() > 0)
+	{
+		// 가장 최근에 지나간 마커 사용
+		const FAnimSyncMarker& RecentMarker = PassedMarkers[PassedMarkers.Num() - 1];
+
+		// 모든 Follower를 이 마커로 동기화
+		for (int32 i = 0; i < BlendSpace->Samples.Num(); ++i)
+		{
+			if (i == LeaderIndex)
+			{
+				continue; // Leader는 스킵
+			}
+
+			const FBlendSample& FollowerSample = BlendSpace->Samples[i];
+			if (!FollowerSample.Animation)
+			{
+				continue;
+			}
+
+			// Follower에서 같은 이름의 Sync Marker 찾기
+			const FAnimSyncMarker* FollowerMarker = FollowerSample.Animation->FindSyncMarker(RecentMarker.MarkerName);
+			if (FollowerMarker)
+			{
+				// Follower의 시간을 해당 Marker로 설정
+				SampleAnimTimes[i] = FollowerMarker->Time;
+
+				UE_LOG("[BlendSpace2D] Synced Sample[%d] to Marker '%s' at Time=%.3f",
+					i, RecentMarker.MarkerName.c_str(), FollowerMarker->Time);
+			}
+			else
+			{
+				// Marker가 없으면 기본 정규화 시간 사용
+				if (FollowerSample.Animation->GetDataModel())
+				{
+					float Duration = FollowerSample.Animation->GetDataModel()->GetPlayLength();
+					SampleAnimTimes[i] = NormalizedTime * Duration;
+				}
+			}
+		}
+	}
+	else
+	{
+		// Marker를 지나지 않았으면 기본 정규화 시간으로 동기화
+		for (int32 i = 0; i < BlendSpace->Samples.Num(); ++i)
+		{
+			if (i == LeaderIndex)
+			{
+				continue;
+			}
+
+			const FBlendSample& Sample = BlendSpace->Samples[i];
+			if (Sample.Animation && Sample.Animation->GetDataModel())
+			{
+				float Duration = Sample.Animation->GetDataModel()->GetPlayLength();
+				SampleAnimTimes[i] = NormalizedTime * Duration;
+			}
+		}
 	}
 }
