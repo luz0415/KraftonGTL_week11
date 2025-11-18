@@ -79,7 +79,7 @@ void UAnimSequence::Load(const FString& InFilePath, ID3D11Device* InDevice)
 		}
 	}
 
-	delete FbxSkeleton;
+	//delete FbxSkeleton;
 
 	// FilePath와 LastModifiedTime 설정
 	// FilePath는 ResourceManager가 이미 설정하지만, 확실하게 하기 위해 다시 설정
