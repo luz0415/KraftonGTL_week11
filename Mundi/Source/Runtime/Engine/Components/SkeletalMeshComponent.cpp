@@ -69,6 +69,15 @@ void USkeletalMeshComponent::HandleAnimNotify(const FAnimNotifyEvent& Notify)
     }
 }
 
+void USkeletalMeshComponent::TriggerAnimNotify(const FString& NotifyName, float TriggerTime, float Duration)
+{
+    FAnimNotifyEvent Event;
+    Event.NotifyName = FName(NotifyName);
+    Event.TriggerTime = TriggerTime;
+    Event.Duration = Duration;
+    OnAnimNotify.Broadcast(Event);
+}
+
 void USkeletalMeshComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);

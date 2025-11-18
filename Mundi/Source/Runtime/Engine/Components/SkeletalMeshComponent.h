@@ -1,11 +1,14 @@
 #pragma once
 #include "SkinnedMeshComponent.h"
+#include "Source/Runtime/Core/Misc/Delegates.h"
 #include "USkeletalMeshComponent.generated.h"
 
 class UAnimInstance;
 class UAnimStateMachine;
 class UAnimSequence;
 struct FAnimNotifyEvent;
+
+DECLARE_DELEGATE_TYPE(FOnAnimNotify, const FAnimNotifyEvent&);
 
 /**
  * @brief 스켈레탈 메시 컴포넌트
@@ -34,6 +37,9 @@ public:
 	void TickComponent(float DeltaTime) override;
 	void SetSkeletalMesh(const FString& PathFileName) override;
 	void HandleAnimNotify(const FAnimNotifyEvent& Notify);
+
+	UFUNCTION(LuaBind)
+	void TriggerAnimNotify(const FString& NotifyName, float TriggerTime, float Duration);
 
 	// Serialization
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
@@ -76,7 +82,8 @@ public:
 	// Reset to Reference Pose (T-Pose)
 	void ResetToReferencePose();
 
-
+	// AnimNotify 델리게이트
+	FOnAnimNotify OnAnimNotify;
 
 protected:
 	TArray<FTransform> CurrentLocalSpacePose;

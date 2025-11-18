@@ -28,6 +28,8 @@ public:
 
     class FLuaCoroutineScheduler& GetScheduler() { return CoroutineSchedular; }
 
+    bool ExecuteNotify(const FString& NotifyClassName, const FString& PropertyData, class USkeletalMeshComponent* MeshComp, float TriggerTime, float Duration);
+
 private:
     sol::state* Lua = nullptr;
     sol::table SharedLib;                         // 공용 유틸 테이블
