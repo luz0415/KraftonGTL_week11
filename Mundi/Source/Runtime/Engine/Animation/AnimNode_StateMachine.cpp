@@ -150,7 +150,28 @@ void FAnimNode_StateMachine::Evaluate(FPoseContext& OutPose)
 	FPoseContext TargetPose;
 	if (OutPose.Skeleton) { TargetPose.Initialize(OutPose.Skeleton); }
 	else { TargetPose.LocalSpacePose.SetNum(OutPose.LocalSpacePose.Num()); }
-	GetPoseFromNode(ActiveNode, CurrentAnimTime, TargetPose, &CurrentBlendSpaceNode);
+
+	if (ActiveNode->AnimAssetType == EAnimAssetType::None)
+	{
+		// None 상태라면: 직전 프레임의 포즈를 유지 (Freeze)
+		// 단, LastFramePose가 유효해야 함 (첫 프레임 제외)
+		if (LastFramePose.Num() > 0)
+		{
+			// 본 개수가 맞는지 안전장치 확인
+			if (TargetPose.LocalSpacePose.Num() != LastFramePose.size())
+			{
+				TargetPose.LocalSpacePose.SetNum(LastFramePose.size());
+			}
+
+			// 스냅샷을 타겟 포즈로 복사 -> 멈춤 효과
+			TargetPose.LocalSpacePose = LastFramePose;
+		}
+		// LastFramePose가 비어있다면(게임 시작 직후 등) 그냥 초기화된 T-Pose 사용
+	}
+	else
+	{
+		GetPoseFromNode(ActiveNode, CurrentAnimTime, TargetPose, &CurrentBlendSpaceNode);
+	}
 
 	// ==========================================
 	// 2. 블렌딩 처리
@@ -265,11 +286,31 @@ void FAnimNode_StateMachine::CheckTransitions()
 		// 트랜지션 내의 모든 조건(AND) 확인
 		for (const FAnimCondition& Condition : Transition.Conditions)
 		{
-			float CurrentVal = OwnerAnimInstance->GetFloat(Condition.ParameterName);
+			float CurrentVal = 0.0f;
+
+			// 타입에 따라 비교할 값(CurrentVal) 결정
+			if (Condition.Type == EAnimConditionType::Parameter)
+			{
+				CurrentVal = OwnerAnimInstance->GetFloat(Condition.ParameterName);
+			}
+			else if (Condition.Type == EAnimConditionType::TimeRemainingRatio)
+			{
+				if (ActiveNode->AnimationAsset)
+				{
+					float Duration = ActiveNode->AnimationAsset->GetPlayLength();
+					if (Duration > 0.0f)
+					{
+						float Ratio = 1.0f - (CurrentAnimTime / Duration);
+						CurrentVal = Ratio;
+					}
+				}
+			}
+
+			// 2. 비교 수행
 			if (!EvaluateCondition(CurrentVal, Condition.Op, Condition.Threshold))
 			{
 				bAllConditionsMet = false;
-				break; // 하나라도 틀리면 이 트랜지션은 실패
+				break;
 			}
 		}
 

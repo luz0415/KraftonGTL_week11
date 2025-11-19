@@ -280,11 +280,12 @@ bool UAnimStateMachine::SaveToFile(const FWideString& Path)
             JSON CondsArray = JSON::Make(JSON::Class::Array);
             for (const FAnimCondition& Cond : Trans.Conditions)
             {
-                JSON condJson = JSON::Make(JSON::Class::Object);
-                condJson["Param"] = Cond.ParameterName.ToString();
-                condJson["Op"] = static_cast<int32>(Cond.Op);
-                condJson["Val"] = Cond.Threshold;
-                CondsArray.append(condJson);
+                JSON CondJson = JSON::Make(JSON::Class::Object);
+                CondJson["Type"] = static_cast<int32>(Cond.Type);
+                CondJson["Param"] = Cond.ParameterName.ToString();
+                CondJson["Op"] = static_cast<int32>(Cond.Op);
+                CondJson["Val"] = Cond.Threshold;
+                CondsArray.append(CondJson);
             }
             TransJson["Conditions"] = CondsArray;
             TransitionsArray.append(TransJson);
@@ -395,24 +396,29 @@ void UAnimStateMachine::Load(const FString& InFilePath, ID3D11Device* InDevice)
             FAnimStateTransition* NewTrans = AddTransition(FName(FromStr), FName(ToStr), BlendTime);
 
             // Conditions 배열 로드
-            JSON CondsArray;
-            if (FJsonSerializer::ReadArray(TransJson, "Conditions", CondsArray))
-            {
-                for (int32 j = 0; j < CondsArray.size(); ++j)
-                {
-                    JSON CondJson = CondsArray.at(j);
+        	JSON CondsArray;
+        	if (FJsonSerializer::ReadArray(TransJson, "Conditions", CondsArray))
+        	{
+        		for (int32 j = 0; j < CondsArray.size(); ++j)
+        		{
+        			JSON CondJson = CondsArray.at(j);
 
-                    FString ParamStr;
-                    int32 OpInt = 0;
-                    float Val = 0.0f;
+        			FString ParamStr;
+        			int32 OpInt = 0;
+        			float Val = 0.0f;
+        			int32 TypeInt = 0;
 
-                    FJsonSerializer::ReadString(CondJson, "Param", ParamStr);
-                    FJsonSerializer::ReadInt32(CondJson, "Op", OpInt);
-                    FJsonSerializer::ReadFloat(CondJson, "Val", Val);
+        			// [추가] "Type" 필드 읽기 (없으면 0으로 간주하여 호환성 유지)
+        			FJsonSerializer::ReadInt32(CondJson, "Type", TypeInt, 0);
+        			FJsonSerializer::ReadString(CondJson, "Param", ParamStr);
+        			FJsonSerializer::ReadInt32(CondJson, "Op", OpInt);
+        			FJsonSerializer::ReadFloat(CondJson, "Val", Val);
 
-                    NewTrans->AddCondition(FName(ParamStr), static_cast<EAnimConditionOp>(OpInt), Val);
-                }
-            }
+        			// AddCondition 호출 시 타입도 함께 전달
+        			NewTrans->AddCondition(static_cast<EAnimConditionType>(TypeInt),
+						FName(ParamStr), static_cast<EAnimConditionOp>(OpInt), Val);
+        		}
+        	}
         }
     }
 

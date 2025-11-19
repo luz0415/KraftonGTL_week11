@@ -138,6 +138,7 @@ private:
     FGraphNode* FindNodeByPin(FGraphState* State, ed::PinId PinID);
     FGraphLink* FindLink(FGraphState* State, ed::LinkId LinkID);
     const char* GetConditionOpString(EAnimConditionOp Op);
+    const char* GetConditionTypeString(EAnimConditionType Type);
     void SaveNodePositions(FGraphState* State);
 
     // Sync Functions

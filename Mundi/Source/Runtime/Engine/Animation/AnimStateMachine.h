@@ -20,12 +20,20 @@ enum class EAnimConditionOp : uint8
 	LessOrEqual     // <=
 };
 
+enum class EAnimConditionType
+{
+	Parameter,          // 외부 변수 (Speed, IsAir 등)
+	TimeRemainingRatio, // 애니메이션 남은 시간 비율 (0.0 ~ 1.0)
+	CurrentTime         // 현재 재생 시간 (초)
+};
+
 /**
  * @brief 단일 트랜지션 조건
  * 예: "Speed" (ParamName)가 100.0 (Threshold)보다 "Greater" (Op) 해야 한다.
  */
 struct FAnimCondition
 {
+	EAnimConditionType Type = EAnimConditionType::Parameter;
 	FName ParameterName;      // 검사할 변수 이름 (예: "Speed", "IsAir")
 	EAnimConditionOp Op;      // 비교 방법
 	float Threshold;          // 기준 값
@@ -33,8 +41,8 @@ struct FAnimCondition
 	FAnimCondition()
 		: ParameterName(), Op(EAnimConditionOp::Greater), Threshold(0.0f) {}
 
-	FAnimCondition(FName InName, EAnimConditionOp InOp, float InVal)
-		: ParameterName(InName), Op(InOp), Threshold(InVal) {}
+	FAnimCondition(EAnimConditionType InType, FName InName, EAnimConditionOp InOp, float InVal)
+		: Type(InType), ParameterName(InName), Op(InOp), Threshold(InVal) {}
 };
 
 /**
@@ -50,9 +58,9 @@ struct FAnimStateTransition
 	FAnimStateTransition(FName InTarget, float InBlendTime)
 		: TargetStateName(InTarget), BlendTime(InBlendTime) {}
 
-	void AddCondition(FName Param, EAnimConditionOp Op, float Val)
+	void AddCondition(EAnimConditionType Type, FName Param, EAnimConditionOp Op, float Val)
 	{
-		Conditions.Add(FAnimCondition(Param, Op, Val));
+		Conditions.Add(FAnimCondition(Type, Param, Op, Val));
 	}
 };
 
