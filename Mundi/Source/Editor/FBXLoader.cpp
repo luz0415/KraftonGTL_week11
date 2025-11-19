@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <cmath>
 #include <cfloat>
+#include <algorithm>
 
 IMPLEMENT_CLASS(UFbxLoader)
 
@@ -1603,6 +1604,12 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 
 	Importer->Destroy();
 
+	// 모든 FBX에 대해 Armature 스케일 보정을 시도
+	// 루트 본 바로 위 노드를 Armature로 간주하고, 스케일이 (1,1,1)이 아니면 적용
+	m_bNeedsScaleCorrection = true;
+	UE_LOG("=== Loading FBX file: '%s' ===", FilePath.c_str());
+	UE_LOG(">>> Armature scale correction enabled for all FBX files.");
+
 	// 3. 좌표계 변환
 	FbxAxisSystem UnrealImportAxis(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
 	FbxAxisSystem SourceSetup = Scene->GetGlobalSettings().GetAxisSystem();
@@ -1703,7 +1710,25 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 			}
 		}
 
-		// 캐시에서 로드 시도
+		// AnimStack 활성화 및 AnimLayer/StartTime 가져오기 (캐시/FBX 양쪽 모두 사용)
+		Scene->SetCurrentAnimationStack(AnimStack);
+
+		// 애니메이션 레이어 가져오기
+		int32 AnimLayerCount = AnimStack->GetMemberCount<FbxAnimLayer>();
+		FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>(0);
+		if (!AnimLayer)
+		{
+			UE_LOG("  No animation layer found, skipping");
+			continue;
+		}
+
+		// 시간 범위 설정
+		FbxTimeSpan TimeSpan = AnimStack->GetLocalTimeSpan();
+		FbxTime StartTime = TimeSpan.GetStart();
+		FbxTime StopTime = TimeSpan.GetStop();
+		double PlayLength = FMath::Max((StopTime - StartTime).GetSecondDouble(), 0.0);
+
+				// 캐시에서 로드 시도
 		if (!bShouldRegenerate)
 		{
 			UE_LOG("  Attempting to load AnimStack '%s' from cache", AnimStackName.c_str());
@@ -1739,6 +1764,10 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 				// CRITICAL FIX: Skeleton 복사본 생성 (캐시 로드 시)
 				DataModel->SetSkeleton(TargetSkeleton);
 
+				// Blender FBX의 경우 Armature 스케일 적용 (캐시 로드 시에도 적용)
+				// RootBoneNode는 nullptr로 전달 -> 함수 내부에서 이름으로 찾기
+				ApplyArmatureScaleCorrection(DataModel, TargetSkeleton, nullptr, RootNode, AnimLayer, StartTime);
+
 				AnimSequence->SetDataModel(DataModel);
 				Reader.Close();
 
@@ -1772,24 +1801,6 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 		{
 			UE_LOG("  Extracting AnimStack '%s' from FBX", AnimStackName.c_str());
 
-			// AnimStack 활성화
-			Scene->SetCurrentAnimationStack(AnimStack);
-
-			// 애니메이션 레이어 가져오기
-			int32 AnimLayerCount = AnimStack->GetMemberCount<FbxAnimLayer>();
-			FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>(0);
-			if (!AnimLayer)
-			{
-				UE_LOG("  No animation layer found, skipping");
-				continue;
-			}
-
-			// 시간 범위 설정
-			FbxTimeSpan TimeSpan = AnimStack->GetLocalTimeSpan();
-			FbxTime StartTime = TimeSpan.GetStart();
-			FbxTime StopTime = TimeSpan.GetStop();
-			double PlayLength = FMath::Max((StopTime - StartTime).GetSecondDouble(), 0.0);
-
 			// FPS 설정
 			FbxTime::EMode TimeMode = Scene->GetGlobalSettings().GetTimeMode();
 			double FrameRate = FbxTime::GetFrameRate(TimeMode);
@@ -1815,12 +1826,20 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 			DataModel->BoneAnimationTracks.Reserve(TargetSkeleton.Bones.Num());
 
 			// 본 애니메이션 추출 (Mixamo ChainMapping 적용)
+			FbxNode* RootBoneNode = nullptr;  // 루트 본 노드 저장용
 			for (const FBone& Bone : TargetSkeleton.Bones)
 			{
 				// Canonical 이름으로 노드 찾기 (Mixamo 접두사 고려)
 				FbxNode* BoneNode = FindNodeByCanonicalName(RootNode, Bone.Name.c_str());
 				if (!BoneNode)
 					continue;
+
+				// 루트 본 노드 저장 (ParentIndex == -1)
+				if (Bone.ParentIndex == -1 && !RootBoneNode)
+				{
+					RootBoneNode = BoneNode;
+					UE_LOG("  Found root bone node: '%s' (FBX node: '%s')", Bone.Name.c_str(), BoneNode->GetName());
+				}
 
 				FBoneAnimationTrack BoneTrack;
 				BoneTrack.BoneName = Bone.Name;
@@ -1842,6 +1861,18 @@ TArray<UAnimSequence*> UFbxLoader::LoadAllFbxAnimations(const FString& FilePath,
 			DataModel->NumberOfKeys = BakeKeyCount;
 
 			UE_LOG("  Successfully extracted animation: %d bone tracks", DataModel->BoneAnimationTracks.Num());
+
+			// Blender에서 Export한 경우, Armature의 Scale을 루트 본에 곱해줌
+		if (RootBoneNode)
+		{
+			ApplyArmatureScaleCorrection(DataModel, TargetSkeleton, RootBoneNode, RootNode, AnimLayer, StartTime);
+		}
+		else
+		{
+			UE_LOG("  Warning: Root bone node not found, skipping Armature scale correction");
+		}
+
+
 
 #ifdef USE_OBJ_CACHE
 			// 캐시 저장 전 데이터 검증
@@ -2075,6 +2106,241 @@ FbxNode* UFbxLoader::FindNodeByCanonicalName(FbxNode* RootNode, const char* Cano
 	}
 
 	return nullptr;
+}
+
+bool UFbxLoader::IsArmatureNode(FbxNode* Node, FVector& OutScale)
+{
+	if (!Node)
+	{
+		return false;
+	}
+
+	FString NodeName = Node->GetName();
+
+	// 1. 노드의 스케일 확인 (1,1,1이 아닌지)
+	FbxDouble3 LocalScale = Node->LclScaling.Get();
+	OutScale = FVector(static_cast<float>(LocalScale[0]),
+	                   static_cast<float>(LocalScale[1]),
+	                   static_cast<float>(LocalScale[2]));
+
+	// 스케일이 거의 (1,1,1)인 경우 Armature가 아니거나 스케일 적용이 불필요
+	const float Tolerance = 0.001f;
+	bool bHasNonUniformScale = (FMath::Abs(OutScale.X - 1.0f) > Tolerance ||
+	                             FMath::Abs(OutScale.Y - 1.0f) > Tolerance ||
+	                             FMath::Abs(OutScale.Z - 1.0f) > Tolerance);
+
+	// 2. 노드 타입 확인 (일반적으로 Null 타입이거나 Skeleton Root)
+	FbxNodeAttribute* Attr = Node->GetNodeAttribute();
+	bool bIsNullOrSkeletonRoot = (!Attr ||
+	                               Attr->GetAttributeType() == FbxNodeAttribute::eNull ||
+	                               Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton);
+
+	// 3. 이름 확인 (선택적 - Armature, armature 등)
+	FString LowerNodeName = NodeName;
+	std::transform(LowerNodeName.begin(), LowerNodeName.end(), LowerNodeName.begin(), ::tolower);
+	bool bNameContainsArmature = LowerNodeName.find("armature") != std::string::npos;
+
+	// 최종 판정 개선:
+	// - 이름에 "armature"가 포함되고, 스케일이 (1,1,1)이 아니고, 타입이 적절한 경우 (엄격한 조건)
+	// - 또는 타입이 적절하고 스케일이 (1,1,1)이 아닌 경우 (완화된 조건)
+	bool bStrictMatch = bNameContainsArmature && bHasNonUniformScale && bIsNullOrSkeletonRoot;
+	bool bRelaxedMatch = bIsNullOrSkeletonRoot && bHasNonUniformScale;
+
+	return bStrictMatch || bRelaxedMatch;
+}
+
+FbxNode* UFbxLoader::FindArmatureNodeForRootBone(FbxNode* RootBoneNode, FbxNode* SceneRootNode)
+{
+	if (!RootBoneNode || !SceneRootNode)
+	{
+		return nullptr;
+	}
+
+	UE_LOG("  === Searching for Armature node ===");
+	UE_LOG("  Root bone: '%s'", RootBoneNode->GetName());
+
+	// 루트 본부터 씬 루트까지 모든 부모 체인을 순회
+	FbxNode* CurrentNode = RootBoneNode->GetParent();
+	int32 Depth = 1;
+
+	while (CurrentNode && CurrentNode != SceneRootNode)
+	{
+		FString NodeName = CurrentNode->GetName();
+
+		// 노드 스케일 확인
+		FbxDouble3 LocalScale = CurrentNode->LclScaling.Get();
+		FVector Scale(static_cast<float>(LocalScale[0]),
+		              static_cast<float>(LocalScale[1]),
+		              static_cast<float>(LocalScale[2]));
+
+		// 노드 타입 확인
+		FbxNodeAttribute* Attr = CurrentNode->GetNodeAttribute();
+		FString AttrType = "None";
+		if (Attr)
+		{
+			switch (Attr->GetAttributeType())
+			{
+			case FbxNodeAttribute::eNull: AttrType = "Null"; break;
+			case FbxNodeAttribute::eSkeleton: AttrType = "Skeleton"; break;
+			case FbxNodeAttribute::eMesh: AttrType = "Mesh"; break;
+			default: AttrType = "Other"; break;
+			}
+		}
+
+		UE_LOG("  [Depth %d] Node '%s': Scale=(%.3f, %.3f, %.3f), Type=%s",
+		       Depth, NodeName.c_str(), Scale.X, Scale.Y, Scale.Z, AttrType.c_str());
+
+		// non-uniform 스케일 체크 (매우 완화된 조건)
+		const float Tolerance = 0.001f;
+		bool bHasNonUniformScale = (FMath::Abs(Scale.X - 1.0f) > Tolerance ||
+		                             FMath::Abs(Scale.Y - 1.0f) > Tolerance ||
+		                             FMath::Abs(Scale.Z - 1.0f) > Tolerance);
+
+		if (bHasNonUniformScale)
+		{
+			UE_LOG("  >>> Found node with non-uniform scale: '%s' at depth %d", NodeName.c_str(), Depth);
+			UE_LOG("  >>> Using this as Armature node");
+			return CurrentNode;
+		}
+
+		// 다음 부모로 이동
+		CurrentNode = CurrentNode->GetParent();
+		Depth++;
+	}
+
+	UE_LOG("  No node with non-uniform scale found in parent chain");
+	return nullptr;
+}
+
+void UFbxLoader::ApplyArmatureScaleCorrection(UAnimDataModel* DataModel, const FSkeleton& TargetSkeleton, FbxNode* RootBoneNode, FbxNode* SceneRootNode, FbxAnimLayer* AnimLayer, FbxTime StartTime)
+{
+	if (!DataModel || !m_bNeedsScaleCorrection)
+	{
+		return;
+	}
+
+	UE_LOG("  === Applying Blender FBX Armature scale correction ===");
+
+	// RootBoneNode가 없으면 이름으로 찾기 (캐시 로드 시)
+	if (!RootBoneNode)
+	{
+		if (!SceneRootNode)
+		{
+			UE_LOG("  Error: Both RootBoneNode and SceneRootNode are null");
+			return;
+		}
+
+		// 루트 본 이름 찾기
+		FString RootBoneName = "";
+		for (const auto& Bone : TargetSkeleton.Bones)
+		{
+			if (Bone.ParentIndex == -1)
+			{
+				RootBoneName = Bone.Name;
+				break;
+			}
+		}
+
+		if (RootBoneName.empty())
+		{
+			UE_LOG("  Warning: Could not find root bone name in skeleton");
+			return;
+		}
+
+		// FBX 씬에서 루트 본 노드 찾기
+		RootBoneNode = FindNodeByCanonicalName(SceneRootNode, RootBoneName.c_str());
+		if (!RootBoneNode)
+		{
+			UE_LOG("  Warning: Could not find root bone node '%s' in FBX scene", RootBoneName.c_str());
+			return;
+		}
+
+		UE_LOG("  Found root bone node by name: '%s'", RootBoneNode->GetName());
+	}
+	else
+	{
+		UE_LOG("  Using provided root bone node: '%s'", RootBoneNode->GetName());
+	}
+
+	// 1. 루트 본의 직접 부모가 Armature
+	FbxNode* ArmatureNode = RootBoneNode->GetParent();
+	if (!ArmatureNode)
+	{
+		UE_LOG("  Root bone has no parent, skipping scale correction");
+		return;
+	}
+
+	UE_LOG("  Parent node (Armature): '%s'", ArmatureNode->GetName());
+
+	// 2. Armature의 스케일 확인
+	FVector ArmatureScale = SampleScale(ArmatureNode, AnimLayer, StartTime);
+	UE_LOG("  Armature scale: (%.6f, %.6f, %.6f)", ArmatureScale.X, ArmatureScale.Y, ArmatureScale.Z);
+
+	// 3. 스케일이 (1,1,1)인지 확인
+	const float Tolerance = 0.001f;
+	bool bHasNonUniformScale = (FMath::Abs(ArmatureScale.X - 1.0f) > Tolerance ||
+	                             FMath::Abs(ArmatureScale.Y - 1.0f) > Tolerance ||
+	                             FMath::Abs(ArmatureScale.Z - 1.0f) > Tolerance);
+
+	if (!bHasNonUniformScale)
+	{
+		UE_LOG("  Armature scale is uniform (1,1,1), no correction needed");
+		return;
+	}
+
+	// 4. 루트 본 이름 찾기 (애니메이션 트랙 매칭용)
+	FString RootBoneName = "";
+	for (const auto& Bone : TargetSkeleton.Bones)
+	{
+		if (Bone.ParentIndex == -1)
+		{
+			RootBoneName = Bone.Name;
+			break;
+		}
+	}
+
+	if (RootBoneName.empty())
+	{
+		UE_LOG("  Warning: Could not find root bone name in skeleton");
+		return;
+	}
+
+	// 5. 루트 본의 애니메이션 트랙에 스케일 적용
+	bool bAppliedScale = false;
+	for (FBoneAnimationTrack& Track : DataModel->BoneAnimationTracks)
+	{
+		if (Track.BoneName == RootBoneName)
+		{
+			UE_LOG("  >>> Applying Armature scale to root bone '%s' animation", RootBoneName.c_str());
+			UE_LOG("      Position keys: %d, Scale keys: %d", Track.InternalTrack.PosKeys.Num(), Track.InternalTrack.ScaleKeys.Num());
+
+			for (FVector& PosKey : Track.InternalTrack.PosKeys)
+			{
+				PosKey.X *= ArmatureScale.X;
+				PosKey.Y *= ArmatureScale.Y;
+				PosKey.Z *= ArmatureScale.Z;
+			}
+
+			for (FVector& ScaleKey : Track.InternalTrack.ScaleKeys)
+			{
+				ScaleKey.X *= ArmatureScale.X;
+				ScaleKey.Y *= ArmatureScale.Y;
+				ScaleKey.Z *= ArmatureScale.Z;
+			}
+
+			bAppliedScale = true;
+			break;
+		}
+	}
+
+	if (bAppliedScale)
+	{
+		UE_LOG("  >>> Scale correction applied successfully!");
+	}
+	else
+	{
+		UE_LOG("  Warning: Root bone '%s' not found in animation tracks", RootBoneName.c_str());
+	}
 }
 
 FSkeleton* UFbxLoader::ExtractSkeletonFromFbx(const FString& FilePath)

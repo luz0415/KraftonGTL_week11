@@ -77,6 +77,33 @@ private:
 	FbxNode* FindNodeByCanonicalName(FbxNode* RootNode, const char* CanonicalName);
 
 	/**
+	 * @brief 노드가 Armature 노드인지 검증
+	 * @param Node 검증할 노드
+	 * @param OutScale 검증 성공 시 Armature의 스케일 값
+	 * @return Armature로 판단되면 true
+	 */
+	bool IsArmatureNode(FbxNode* Node, FVector& OutScale);
+
+	/**
+	 * @brief 루트 본에 적용할 Armature 노드 찾기
+	 * @param RootBoneNode 루트 본 노드
+	 * @param SceneRootNode 씬의 루트 노드
+	 * @return Armature 노드 (없으면 nullptr)
+	 */
+	FbxNode* FindArmatureNodeForRootBone(FbxNode* RootBoneNode, FbxNode* SceneRootNode);
+
+	/**
+	 * @brief AnimDataModel에 Armature 스케일 적용 (Blender FBX 처리)
+	 * @param DataModel 애니메이션 데이터 모델
+	 * @param TargetSkeleton 대상 스켈레톤
+	 * @param RootBoneNode 루트 본의 FBX 노드 (nullptr이면 이름으로 찾기)
+	 * @param SceneRootNode FBX 씬 루트 노드 (RootBoneNode가 nullptr일 때 검색용)
+	 * @param AnimLayer 애니메이션 레이어
+	 * @param StartTime 애니메이션 시작 시간
+	 */
+	void ApplyArmatureScaleCorrection(UAnimDataModel* DataModel, const FSkeleton& TargetSkeleton, FbxNode* RootBoneNode, FbxNode* SceneRootNode, FbxAnimLayer* AnimLayer, FbxTime StartTime);
+
+	/**
 	 * @brief 모든 스켈레탈 메시와 애니메이션의 본 계층 구조 출력
 	 */
 	static void PrintAllSkeletonHierarchies();
@@ -101,4 +128,5 @@ private:
 	FbxManager* SdkManager = nullptr;
 	/** 현재 로드 중인 FBX 파일의 상위 디렉토리 (UTF-8) */
 	FString CurrentFbxBaseDir;
+	bool m_bNeedsScaleCorrection = false;
 };
