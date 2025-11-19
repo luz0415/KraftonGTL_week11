@@ -22,7 +22,7 @@
       "Conditions" : [{
           "Op" : 2,
           "Param" : "Speed",
-          "Val" : 1.000000
+          "Val" : 0.100000
         }],
       "From" : "Idle",
       "To" : "State_0"
@@ -31,7 +31,7 @@
       "Conditions" : [{
           "Op" : 3,
           "Param" : "Speed",
-          "Val" : 1.000000
+          "Val" : 0.100000
         }],
       "From" : "State_0",
       "To" : "Idle"

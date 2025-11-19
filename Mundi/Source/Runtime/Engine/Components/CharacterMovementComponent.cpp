@@ -251,7 +251,7 @@ void UCharacterMovementComponent::UpdateVelocity(float DeltaTime)
             HorizontalVelocity += AccelDir * AccelAmount;
         }
 
-        // 최대 속도 제한 (입력 방향과 상관없이 크기만 제한)
+        // 최대 속도 제한
         if (HorizontalVelocity.SizeSquared() > (MaxWalkSpeed * MaxWalkSpeed))
         {
             HorizontalVelocity = HorizontalVelocity.GetNormalized() * MaxWalkSpeed;

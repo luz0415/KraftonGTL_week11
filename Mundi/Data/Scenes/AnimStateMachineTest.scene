@@ -1,67 +1,9 @@
 {
   "Actors" : {
-    "1001" : {
-      "ObjectName" : "AAmbientLightActor_2",
-      "OwnedComponents" : [{
-          "Id" : 1003,
-          "Intensity" : 0.100000,
-          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "ObjectName" : "UAmbientLightComponent_2",
-          "ParentId" : 0,
-          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
-          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
-          "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "ShadowBias" : 0.000010,
-          "ShadowResolutionScale" : 1024,
-          "ShadowSharpen" : 0.500000,
-          "ShadowSlopeBias" : 0.000010,
-          "Temperature" : 6500.000000,
-          "Type" : "UAmbientLightComponent",
-          "bCastShadows" : true,
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bTickEnabled" : true
-        }],
-      "RootComponentId" : 1003,
-      "Tag" : "",
-      "Type" : "AAmbientLightActor",
-      "bActorHiddenInGame" : false,
-      "bActorIsActive" : true
-    },
-    "1004" : {
-      "ObjectName" : "스태틱 메시_0",
-      "OwnedComponents" : [{
-          "Id" : 1006,
-          "MaterialSlots" : [{
-              "AssetPath" : "texture",
-              "Type" : "UMaterial"
-            }],
-          "ObjectName" : "UStaticMeshComponent_2",
-          "ParentId" : 0,
-          "RelativeLocation" : [6.209210, -4.573943, -0.934354],
-          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
-          "RelativeScale" : [100.000000, 100.000000, 1.000000],
-          "StaticMesh" : "Data/cube-tex.obj",
-          "Type" : "UStaticMeshComponent",
-          "bBlockComponent" : false,
-          "bCastShadows" : true,
-          "bGenerateOverlapEvents" : true,
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bTickEnabled" : true
-        }],
-      "RootComponentId" : 1006,
-      "Tag" : "",
-      "Type" : "AStaticMeshActor",
-      "bActorHiddenInGame" : false,
-      "bActorIsActive" : true
-    },
-    "1007" : {
+    "1000" : {
       "ObjectName" : "APlayerCameraManager_3",
       "OwnedComponents" : [{
-          "Id" : 1008,
+          "Id" : 1001,
           "ObjectName" : "USceneComponent_4",
           "ParentId" : 0,
           "RelativeLocation" : [0.000000, 0.000000, 0.000000],
@@ -73,19 +15,26 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1008,
+      "RootComponentId" : 1001,
       "Tag" : "",
       "Type" : "APlayerCameraManager",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1009" : {
+    "1002" : {
       "ObjectName" : "ACharacter_0",
       "OwnedComponents" : [{
+          "ObjectName" : "ULuaScriptComponent_1",
+          "ScriptFilePath" : "Data/Scripts/AnimInstanceBinding.lua",
+          "Type" : "ULuaScriptComponent",
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bTickEnabled" : true
+        }, {
           "AnimBlueprintPath" : "Data/StateMachine/Player.statemachine",
           "AnimToPlayPath" : "",
           "AnimationMode" : 0,
-          "Id" : 1014,
+          "Id" : 1007,
           "MaterialSlots" : [{
               "Type" : "None"
             }, {
@@ -120,20 +69,13 @@
           "bIsActive" : true,
           "bTickEnabled" : true
         }, {
-          "ObjectName" : "ULuaScriptComponent_1",
-          "ScriptFilePath" : "Data/Scripts/AnimInstanceBinding.lua",
-          "Type" : "ULuaScriptComponent",
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bTickEnabled" : true
-        }, {
           "AspectRatio" : 1.000000,
           "FarClip" : 100.000000,
           "FieldOfView" : 60.000000,
-          "Id" : 1016,
+          "Id" : 1010,
           "NearClip" : 0.100000,
           "ObjectName" : "UCameraComponent_5",
-          "ParentId" : 1014,
+          "ParentId" : 1007,
           "ProjectionMode" : 0,
           "RelativeLocation" : [-0.000000, 0.000000, 5.000000],
           "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
@@ -146,14 +88,14 @@
           "bTickEnabled" : true
         }, {
           "AirControl" : 0.050000,
-          "BrakingDeceleration" : 5.000000,
+          "BreakingDeceleration" : 2048.000000,
           "GravityDirection" : [0.000000, 0.000000, -1.000000],
           "GravityScale" : 1.000000,
-          "GroundFriction" : 50.000000,
+          "GroundFriction" : 0.900000,
           "JumpZVelocity" : 20.200001,
           "MaxAcceleration" : 10.000000,
           "MaxAirTime" : 2.000000,
-          "MaxWalkSpeed" : 20.000000,
+          "MaxWalkSpeed" : 5.000000,
           "ObjectName" : "UCharacterMovementComponent_1",
           "Type" : "UCharacterMovementComponent",
           "bCanJump" : true,
@@ -161,13 +103,13 @@
           "bIsActive" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1014,
+      "RootComponentId" : 1007,
       "Tag" : "",
       "Type" : "ACharacter",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "998" : {
+    "1012" : {
       "ObjectName" : "ADirectionalLightActor_2",
       "OwnedComponents" : [{
           "CascadedAreaColorDebugValue" : 0.000000,
@@ -175,7 +117,7 @@
           "CascadedCount" : 4,
           "CascadedLinearBlendingValue" : 0.500000,
           "CascadedOverlapValue" : 0.200000,
-          "Id" : 1000,
+          "Id" : 1014,
           "Intensity" : 1.000000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UDirectionalLightComponent_2",
@@ -196,14 +138,72 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1000,
+      "RootComponentId" : 1014,
       "Tag" : "",
       "Type" : "ADirectionalLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
+    },
+    "994" : {
+      "ObjectName" : "AAmbientLightActor_2",
+      "OwnedComponents" : [{
+          "Id" : 996,
+          "Intensity" : 0.100000,
+          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "ObjectName" : "UAmbientLightComponent_2",
+          "ParentId" : 0,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "ShadowBias" : 0.000010,
+          "ShadowResolutionScale" : 1024,
+          "ShadowSharpen" : 0.500000,
+          "ShadowSlopeBias" : 0.000010,
+          "Temperature" : 6500.000000,
+          "Type" : "UAmbientLightComponent",
+          "bCastShadows" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 996,
+      "Tag" : "",
+      "Type" : "AAmbientLightActor",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    },
+    "997" : {
+      "ObjectName" : "스태틱 메시_0",
+      "OwnedComponents" : [{
+          "Id" : 999,
+          "MaterialSlots" : [{
+              "AssetPath" : "texture",
+              "Type" : "UMaterial"
+            }],
+          "ObjectName" : "UStaticMeshComponent_2",
+          "ParentId" : 0,
+          "RelativeLocation" : [6.209210, -4.573943, -0.934354],
+          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
+          "RelativeScale" : [100.000000, 100.000000, 1.000000],
+          "StaticMesh" : "Data/cube-tex.obj",
+          "Type" : "UStaticMeshComponent",
+          "bBlockComponent" : false,
+          "bCastShadows" : true,
+          "bGenerateOverlapEvents" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 999,
+      "Tag" : "",
+      "Type" : "AStaticMeshActor",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
     }
   },
-  "NextUUID" : 1136,
+  "NextUUID" : 1044,
   "PerspectiveCamera" : {
     "FOV" : [60.000000],
     "FarClip" : [2000.000000],
