@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "EditorEngine.h"
-//#include "MiniDump.h"
+#include "MiniDump.h"
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 #   define _CRTDBG_MAP_ALLOC
@@ -18,7 +18,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     _CrtSetBreakAlloc(0);
 #endif
 
-	//InitializeMiniDump();
+	InitializeMiniDump();
     if (!GEngine.Startup(hInstance))
         return -1;
 
