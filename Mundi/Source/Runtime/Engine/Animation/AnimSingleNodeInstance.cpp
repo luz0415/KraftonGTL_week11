@@ -12,6 +12,29 @@ UAnimSingleNodeInstance::UAnimSingleNodeInstance()
 }
 
 /**
+ * @brief 애니메이션 재생 (부모 클래스 오버라이드)
+
+ * @param AnimSequence 재생할 애니메이션
+ * @param InPlayRate 재생 속도
+ */
+void UAnimSingleNodeInstance::PlayAnimation(UAnimSequenceBase* AnimSequence, float InPlayRate)
+{
+	if (!AnimSequence)
+	{
+		return;
+	}
+
+	// AnimSequence로 다운캐스트 (UAnimSequenceBase는 추상 클래스)
+	UAnimSequence* Sequence = dynamic_cast<UAnimSequence*>(AnimSequence);
+	if (Sequence)
+	{
+		SetAnimationAsset(Sequence);
+		SetPlayRate(InPlayRate);
+		Play(true);  // 기본적으로 루프 활성화
+	}
+}
+
+/**
  * @brief 재생할 애니메이션 에셋 설정
  */
 void UAnimSingleNodeInstance::SetAnimationAsset(UAnimSequence* NewAnimToPlay)
@@ -122,26 +145,48 @@ void UAnimSingleNodeInstance::UpdateAnimation(float DeltaSeconds)
 
 	if (bLooping)
 	{
-		// 루프 애니메이션: 시간이 넘어가면 0으로 되돌림
-		while (CurrentTime >= AnimLength)
+		// 루프 애니메이션
+		if (PlayRate >= 0.0f)
 		{
-			CurrentTime -= AnimLength;
-			PreviousTime -= AnimLength;
-
-			// 루프 시점에 이벤트 발생 (필요시)
-			// OnAnimationLooped();
+			// 정방향 재생: 시간이 넘어가면 0으로 되돌림
+			while (CurrentTime >= AnimLength)
+			{
+				CurrentTime -= AnimLength;
+				PreviousTime -= AnimLength;
+			}
+		}
+		else
+		{
+			// 역방향 재생: 시간이 0보다 작아지면 끝으로 되돌림
+			while (CurrentTime < 0.0f)
+			{
+				CurrentTime += AnimLength;
+				PreviousTime += AnimLength;
+			}
 		}
 	}
 	else
 	{
 		// 루프가 아닌 애니메이션: 끝에 도달하면 정지
-		if (CurrentTime >= AnimLength)
+		if (PlayRate >= 0.0f)
 		{
-			CurrentTime = AnimLength;
-			bIsPlaying = false;
-
-			// 애니메이션 종료 이벤트
-			OnAnimationEnd();
+			// 정방향 재생
+			if (CurrentTime >= AnimLength)
+			{
+				CurrentTime = AnimLength;
+				bIsPlaying = false;
+				OnAnimationEnd();
+			}
+		}
+		else
+		{
+			// 역방향 재생
+			if (CurrentTime <= 0.0f)
+			{
+				CurrentTime = 0.0f;
+				bIsPlaying = false;
+				OnAnimationEnd();
+			}
 		}
 	}
 

@@ -183,7 +183,7 @@ void FAnimNode_StateMachine::Evaluate(FPoseContext& OutPose)
 			// 본 개수가 맞는지 안전장치 확인
 			if (TargetPose.LocalSpacePose.Num() != LastFramePose.size())
 			{
-				TargetPose.LocalSpacePose.SetNum(LastFramePose.size());
+				TargetPose.LocalSpacePose.SetNum(static_cast<int32>(LastFramePose.size()));
 			}
 
 			// 스냅샷을 타겟 포즈로 복사 -> 멈춤 효과
@@ -215,7 +215,7 @@ void FAnimNode_StateMachine::Evaluate(FPoseContext& OutPose)
 			if (SourcePose.LocalSpacePose.Num() != FrozenSnapshotPose.size())
 			{
 				// 크기가 다르면 강제로 맞춤 (T-Pose 방지)
-				SourcePose.LocalSpacePose.SetNum(FrozenSnapshotPose.size());
+				SourcePose.LocalSpacePose.SetNum(static_cast<int32>(FrozenSnapshotPose.size()));
 			}
 
 			SourcePose.LocalSpacePose = FrozenSnapshotPose;

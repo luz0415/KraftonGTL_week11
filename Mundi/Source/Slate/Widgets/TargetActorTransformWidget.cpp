@@ -432,8 +432,22 @@ void UTargetActorTransformWidget::RenderComponentHierarchy(AActor* SelectedActor
 		RenderActorComponent(SelectedActor, SelectedComponent, ComponentPendingRemoval);
 	}
 
-	// 삭제 입력 처리
-	const bool bDeletePressed = ImGui::IsKeyPressed(ImGuiKey_Delete);
+	// 삭제 입력 처리 (Preview 윈도우에 포커스가 없을 때만)
+	// Preview 윈도우가 열려있는지 확인
+	bool bPreviewFocused = false;
+	ImGuiWindow* PreviewWindow = ImGui::FindWindowByName("Preview");
+	if (PreviewWindow)
+	{
+		bPreviewFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+		// 현재 포커스된 윈도우가 Preview인지 체크
+		ImGuiContext* Context = ImGui::GetCurrentContext();
+		if (Context->NavWindow && Context->NavWindow->RootWindow == PreviewWindow->RootWindow)
+		{
+			bPreviewFocused = true;
+		}
+	}
+
+	const bool bDeletePressed = !bPreviewFocused && ImGui::IsKeyPressed(ImGuiKey_Delete);
 	if (bDeletePressed)
 	{
 		if (bActorSelected) ActorPendingRemoval = SelectedActor;

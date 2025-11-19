@@ -83,6 +83,7 @@ public:
 	bool IsLooping() const { return bLooping; }
 
 	// ===== Override =====
+	void PlayAnimation(UAnimSequenceBase* AnimSequence, float InPlayRate = 1.0f) override;
 
 	/**
 	 * @brief 매 프레임 업데이트

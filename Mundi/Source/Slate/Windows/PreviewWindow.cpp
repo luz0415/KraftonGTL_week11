@@ -14,6 +14,7 @@
 #include "Source/Editor/FBXLoader.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimSingleNodeInstance.h"
 #include "Source/Runtime/Engine/Components/SkeletalMeshComponent.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Runtime/Engine/Animation/AnimDataModel.h"
@@ -440,7 +441,8 @@ void SPreviewWindow::OnRender()
                                         if (!AnimInst)
                                         {
                                             UE_LOG("[Animation] Creating new AnimInstance for auto-play");
-                                            AnimInst = NewObject<UAnimInstance>();
+                                            UAnimSingleNodeInstance* SingleNodeInst = NewObject<UAnimSingleNodeInstance>();
+                                            AnimInst = SingleNodeInst;
                                             if (AnimInst)
                                             {
                                                 Component->SetAnimInstance(AnimInst);
@@ -1567,7 +1569,8 @@ void SPreviewWindow::OnRender()
                                 if (!AnimInst)
                                 {
                                     UE_LOG("[Animation] Creating new AnimInstance for first animation");
-                                    AnimInst = NewObject<UAnimInstance>();
+                                    UAnimSingleNodeInstance* SingleNodeInst = NewObject<UAnimSingleNodeInstance>();
+                                    AnimInst = SingleNodeInst;
                                     if (AnimInst)
                                     {
                                         SkelComp->SetAnimInstance(AnimInst);

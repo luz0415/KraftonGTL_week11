@@ -6,6 +6,7 @@
 #include "Source/Runtime/Engine/Animation/AnimDataModel.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimSingleNodeInstance.h"
 #include "Source/Runtime/Engine/Components/SkeletalMeshComponent.h"
 #include "Source/Runtime/Core/Misc/WindowsBinWriter.h"
 
@@ -264,6 +265,19 @@ void SPreviewWindow::RenderTimelineControls(ViewerState* State)
         if (ImGui::ImageButton("##Loop", LoopIcon->GetShaderResourceView(), ButtonSizeVec))
         {
             State->bLoopAnimation = !State->bLoopAnimation;
+
+            // AnimInstance의 루프 설정만 업데이트 (재시작하지 않음)
+            if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+            {
+                USkeletalMeshComponent* SkelComp = State->PreviewActor->GetSkeletalMeshComponent();
+                if (UAnimInstance* AnimInst = SkelComp->GetAnimInstance())
+                {
+                    if (UAnimSingleNodeInstance* SingleNodeInst = dynamic_cast<UAnimSingleNodeInstance*>(AnimInst))
+                    {
+                        SingleNodeInst->SetLooping(State->bLoopAnimation);
+                    }
+                }
+            }
         }
     }
     else
@@ -275,6 +289,19 @@ void SPreviewWindow::RenderTimelineControls(ViewerState* State)
         if (ImGui::Button("Loop", ButtonSizeVec))
         {
             State->bLoopAnimation = !State->bLoopAnimation;
+
+            // AnimInstance의 루프 설정만 업데이트 (재시작하지 않음)
+            if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+            {
+                USkeletalMeshComponent* SkelComp = State->PreviewActor->GetSkeletalMeshComponent();
+                if (UAnimInstance* AnimInst = SkelComp->GetAnimInstance())
+                {
+                    if (UAnimSingleNodeInstance* SingleNodeInst = dynamic_cast<UAnimSingleNodeInstance*>(AnimInst))
+                    {
+                        SingleNodeInst->SetLooping(State->bLoopAnimation);
+                    }
+                }
+            }
         }
         if (bWasLooping)
         {
@@ -286,6 +313,8 @@ void SPreviewWindow::RenderTimelineControls(ViewerState* State)
         ImGui::SetTooltip("Loop");
     }
 
+    ImGui::SameLine();
+    ImGui::Dummy(ImVec2(20, 0));  // Loop와 Speed 사이 패딩
     ImGui::SameLine();
 
     // 재생 속도 (입력 가능 + 드래그)
@@ -1081,8 +1110,23 @@ void SPreviewWindow::RenderTimeline(ViewerState* State)
                     State->NotifyTrackNames.insert(State->NotifyTrackNames.begin() + InsertIndex, TrackNameBuf);
                     State->UsedTrackNumbers.insert(NewTrackNumber);
                 }
+
                 // 마지막 남은 Track은 삭제 불가
-                bool bCanRemove = State->NotifyTrackNames.Num() > 1;
+                // Notify가 있는 Track도 삭제 불가
+                bool bHasNotify = false;
+                if (State->CurrentAnimation)
+                {
+                    const TArray<FAnimNotifyEvent>& Notifies = State->CurrentAnimation->Notifies;
+                    for (const FAnimNotifyEvent& Notify : Notifies)
+                    {
+                        if (Notify.TrackIndex == TrackIndex)
+                        {
+                            bHasNotify = true;
+                            break;
+                        }
+                    }
+                }
+                bool bCanRemove = State->NotifyTrackNames.Num() > 1 && !bHasNotify;
                 if (ImGui::MenuItem("Remove Track", nullptr, false, bCanRemove))
                 {
                     TrackToRemove = TrackIndex;
@@ -1860,8 +1904,8 @@ void SPreviewWindow::RenderTimeline(ViewerState* State)
         State->PlaybackRangeEndFrame = -1; // 전체 범위
     }
 
-    // 키보드 단축키 (Timeline 영역이 호버되어 있을 때만)
-    if (ImGui::IsItemHovered())
+    // 키보드 단축키 (Preview 윈도우에 포커스가 있고 Timeline 영역이 호버되어 있을 때만)
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered())
     {
         bool bCtrlHeld = ImGui::GetIO().KeyCtrl;
 
@@ -2323,7 +2367,24 @@ void SPreviewWindow::DrawNotifyTracksPanel(ViewerState* State, float StartTime, 
 
             ImGui::Separator();
 
-            if (ImGui::MenuItem("Remove Track"))
+            // 마지막 남은 Track은 삭제 불가
+            // Notify가 있는 Track도 삭제 불가
+            bool bHasNotifyInTrack = false;
+            if (State->CurrentAnimation)
+            {
+                const TArray<FAnimNotifyEvent>& Notifies = State->CurrentAnimation->Notifies;
+                for (const FAnimNotifyEvent& Notify : Notifies)
+                {
+                    if (Notify.TrackIndex == TrackIndex)
+                    {
+                        bHasNotifyInTrack = true;
+                        break;
+                    }
+                }
+            }
+            bool bCanRemoveTrack = State->NotifyTrackNames.Num() > 1 && !bHasNotifyInTrack;
+
+            if (ImGui::MenuItem("Remove Track", nullptr, false, bCanRemoveTrack))
             {
                 State->NotifyTrackNames.erase(State->NotifyTrackNames.begin() + TrackIndex);
                 if (State->SelectedNotifyTrackIndex == TrackIndex)
