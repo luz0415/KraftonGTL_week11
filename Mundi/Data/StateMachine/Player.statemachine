@@ -51,7 +51,7 @@
       "StateExitNotifies" : [],
       "StateFullyBlendedNotifies" : []
     }, {
-      "AnimAsset" : "Data/Animation/XBOT_JumpingEnd.fbx#mixamo.com",
+      "AnimAsset" : "Data/Animation/CustomizedJumpEnd.anim",
       "AnimAssetType" : 1,
       "BlendSpaceAsset" : "",
       "EditorPosX" : 402.000000,

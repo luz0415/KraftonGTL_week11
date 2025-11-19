@@ -137,6 +137,9 @@ protected:
 	float PreviousFrameTransitionAlpha; // 이전 프레임의 TransitionAlpha (Transition Notify 판정용)
 	bool bHasTriggeredFullyBlended; // FullyBlended Notify가 이미 트리거되었는지
 
+	// ===== AnimNotifyState 관리 (AnimSequence Notify용) =====
+	TArray<FAnimNotifyEvent> ActiveAnimNotifyState;
+
 protected:
 	/**
 	 * @brief 트랜지션 조건 검사

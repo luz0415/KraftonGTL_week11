@@ -9,6 +9,8 @@
 #include "AnimNode_BlendSpace2D.h"
 #include "Source/Runtime/Engine/GameFramework/Pawn.h"
 #include "Source/Runtime/Engine/GameFramework/Character.h"
+#include "Source/Runtime/Engine/GameFramework/World.h"
+#include "Source/Runtime/Engine/Scripting/LuaManager.h"
 
 FAnimNode_StateMachine::FAnimNode_StateMachine()
 	: StateMachineAsset(nullptr), OwnerPawn(nullptr)
@@ -65,13 +67,121 @@ void FAnimNode_StateMachine::Update(float DeltaSeconds)
 		PreviousFrameAnimTime = CurrentAnimTime;
 		// 애니메이션 시간 갱신
 		CurrentAnimTime += DeltaSeconds;
-		if (ActiveNode->AnimationAsset && ActiveNode->bLoop)
+
+		float AnimLength = 0.0f;
+		if (ActiveNode->AnimationAsset)
+		{
+			AnimLength = ActiveNode->AnimationAsset->GetPlayLength();
+		}
+
+		bool bLooped = false;
+		if (ActiveNode->AnimationAsset && ActiveNode->bLoop && AnimLength > 0.f)
 		{
 			// 루프 처리
-			float Length = ActiveNode->AnimationAsset->GetPlayLength();
-			if (Length > 0.f)
+			if (CurrentAnimTime >= AnimLength)
 			{
-				CurrentAnimTime = fmod(CurrentAnimTime, Length);
+				bLooped = true;
+				CurrentAnimTime = fmod(CurrentAnimTime, AnimLength);
+			}
+		}
+
+		// AnimSequence 자체의 Notify 처리
+		if (ActiveNode->AnimationAsset && OwnerAnimInstance)
+		{
+			USkeletalMeshComponent* MeshComp = nullptr;
+			if (ACharacter* Character = Cast<ACharacter>(OwnerPawn))
+			{
+				MeshComp = Character->GetMesh();
+			}
+
+			if (MeshComp)
+			{
+				AActor* Owner = MeshComp->GetOwner();
+				UWorld* World = Owner ? Owner->GetWorld() : nullptr;
+				FLuaManager* LuaMgr = World ? World->GetLuaManager() : nullptr;
+
+				if (LuaMgr)
+				{
+					// 1. 현재 프레임에서 활성화되어야 할 Notify 수집
+					TArray<const FAnimNotifyEvent*> CurrentFrameNotifies;
+
+					if (bLooped)
+					{
+						// 루프 시: 이전 시간 ~ 끝 + 0 ~ 현재 시간
+						ActiveNode->AnimationAsset->GetAnimNotifiesFromDeltaPositions(PreviousFrameAnimTime, AnimLength, CurrentFrameNotifies);
+						ActiveNode->AnimationAsset->GetAnimNotifiesFromDeltaPositions(0.0f, CurrentAnimTime, CurrentFrameNotifies);
+					}
+					else
+					{
+						ActiveNode->AnimationAsset->GetAnimNotifiesFromDeltaPositions(PreviousFrameAnimTime, CurrentAnimTime, CurrentFrameNotifies);
+					}
+
+					// 2. NewActiveAnimNotifyState 구축 (이번 프레임에 활성화될 NotifyState 목록)
+					TArray<FAnimNotifyEvent> NewActiveAnimNotifyState;
+					TArray<const FAnimNotifyEvent*> NotifyStateBeginEvents;
+
+					for (const FAnimNotifyEvent* NotifyEvent : CurrentFrameNotifies)
+					{
+						if (!NotifyEvent)
+						{
+							continue;
+						}
+
+						// AnimNotifyState (Duration > 0)
+						if (NotifyEvent->Duration > 0.0f)
+						{
+							// 이미 ActiveAnimNotifyState에 있는지 확인
+							bool bAlreadyActive = false;
+							for (int32 i = 0; i < ActiveAnimNotifyState.Num(); ++i)
+							{
+								if (ActiveAnimNotifyState[i] == *NotifyEvent)
+								{
+									// 이미 활성화된 NotifyState → ActiveAnimNotifyState에서 제거 (NewActive로 이동)
+									ActiveAnimNotifyState.erase(ActiveAnimNotifyState.begin() + i);
+									bAlreadyActive = true;
+									break;
+								}
+							}
+
+							if (!bAlreadyActive)
+							{
+								// 새로 시작하는 NotifyState → NotifyBegin 호출 대기열에 추가
+								NotifyStateBeginEvents.Add(NotifyEvent);
+							}
+
+							// NewActiveAnimNotifyState에 추가 (이번 프레임에도 계속 활성)
+							NewActiveAnimNotifyState.Add(*NotifyEvent);
+						}
+						else
+						{
+							// 일반 Notify (Duration == 0) → 즉시 실행
+							OwnerAnimInstance->TriggerNotify(*NotifyEvent, MeshComp);
+						}
+					}
+
+					// 3. ActiveAnimNotifyState에 남아있는 항목들 → 더 이상 활성화되지 않음 → NotifyEnd 호출
+					for (int32 i = 0; i < ActiveAnimNotifyState.Num(); ++i)
+					{
+						const FAnimNotifyEvent& AnimNotifyEvent = ActiveAnimNotifyState[i];
+						LuaMgr->ExecuteNotifyStateEnd(AnimNotifyEvent.NotifyName.ToString(), AnimNotifyEvent.PropertyData, MeshComp, CurrentAnimTime);
+					}
+
+					// 4. 새로 시작하는 NotifyState → NotifyBegin 호출
+					for (const FAnimNotifyEvent* NotifyEvent : NotifyStateBeginEvents)
+					{
+						LuaMgr->ExecuteNotifyStateBegin(NotifyEvent->NotifyName.ToString(), NotifyEvent->PropertyData, MeshComp, CurrentAnimTime);
+					}
+
+					// 5. ActiveAnimNotifyState 교체
+					ActiveAnimNotifyState = std::move(NewActiveAnimNotifyState);
+
+					// 6. 현재 활성화된 모든 NotifyState → NotifyTick 호출
+					for (int32 i = 0; i < ActiveAnimNotifyState.Num(); ++i)
+					{
+						const FAnimNotifyEvent& AnimNotifyEvent = ActiveAnimNotifyState[i];
+						LuaMgr->ExecuteNotifyStateTick(AnimNotifyEvent.NotifyName.ToString(), AnimNotifyEvent.PropertyData, MeshComp, CurrentAnimTime, DeltaSeconds);
+					}
+				}
 			}
 		}
 	}
@@ -246,6 +356,32 @@ void FAnimNode_StateMachine::TransitionTo(FName NewStateName, float BlendTime)
 	if (ActiveNode)
 	{
 		TriggerStateExitNotifies(ActiveNode);
+	}
+
+	// 이전 애니메이션의 활성 NotifyState 종료
+	if (!ActiveAnimNotifyState.IsEmpty())
+	{
+		USkeletalMeshComponent* MeshComp = nullptr;
+		if (ACharacter* Character = Cast<ACharacter>(OwnerPawn))
+		{
+			MeshComp = Character->GetMesh();
+		}
+
+		if (MeshComp)
+		{
+			AActor* Owner = MeshComp->GetOwner();
+			UWorld* World = Owner ? Owner->GetWorld() : nullptr;
+			FLuaManager* LuaMgr = World ? World->GetLuaManager() : nullptr;
+
+			if (LuaMgr)
+			{
+				for (const FAnimNotifyEvent& AnimNotifyEvent : ActiveAnimNotifyState)
+				{
+					LuaMgr->ExecuteNotifyStateEnd(AnimNotifyEvent.NotifyName.ToString(), AnimNotifyEvent.PropertyData, MeshComp, CurrentAnimTime);
+				}
+			}
+		}
+		ActiveAnimNotifyState.Empty();
 	}
 
 	// 이전 상태 저장
