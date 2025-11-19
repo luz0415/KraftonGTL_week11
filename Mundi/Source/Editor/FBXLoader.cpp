@@ -2243,10 +2243,10 @@ void UFbxLoader::PrintAllSkeletonHierarchies()
 		if (AnimSeq)
 		{
 			UAnimDataModel* DataModel = AnimSeq->GetDataModel();
-			if (DataModel && DataModel->Skeleton)
+			if (DataModel && DataModel->GetSkeleton())
 			{
 				FString Title = "Animation: " + AnimSeq->GetName();
-				PrintSkeletonHierarchy(DataModel->Skeleton, Title);
+				PrintSkeletonHierarchy(DataModel->GetSkeleton(), Title);
 				UE_LOG(""); // 빈 줄
 			}
 		}
