@@ -30,4 +30,7 @@ private:
     USkeletalMeshComponent* Target = nullptr;
     int32 BoneIndex = -1;
     ViewerState* State = nullptr;
+
+    // UpdateAnchorFromBone 호출 중인지 구분하는 플래그
+    bool bUpdatingFromBone = false;
 };

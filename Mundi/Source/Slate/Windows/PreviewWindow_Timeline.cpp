@@ -559,14 +559,27 @@ void SPreviewWindow::RefreshAnimationFrame(ViewerState* State)
             AnimInst->SetPosition(State->CurrentAnimationTime);
         }
 
-        // 애니메이션 업데이트 후, 편집된 본 트랜스폼 재적용
+        // 애니메이션 업데이트 후, 편집된 본 트랜스폼 델타 적용
         if (State->ViewMode == EViewerMode::Animation && !State->EditedBoneTransforms.empty())
         {
             for (const auto& Pair : State->EditedBoneTransforms)
             {
                 int32 BoneIndex = Pair.first;
-                const FTransform& EditedTransform = Pair.second;
-                SkelComp->SetBoneLocalTransform(BoneIndex, EditedTransform);
+                const FTransform& Delta = Pair.second;
+
+                // 현재 애니메이션 트랜스폼 가져오기
+                FTransform AnimTransform = SkelComp->GetBoneLocalTransform(BoneIndex);
+
+                // 델타 계산용으로 현재 애니메이션 트랜스폼 저장
+                State->AnimationBoneTransforms[BoneIndex] = AnimTransform;
+
+                // 델타 적용: Position=덧셈, Rotation=곱셈, Scale=곱셈
+                FTransform FinalTransform;
+                FinalTransform.Translation = AnimTransform.Translation + Delta.Translation;
+                FinalTransform.Rotation = (AnimTransform.Rotation * Delta.Rotation).GetNormalized();
+                FinalTransform.Scale3D = AnimTransform.Scale3D * Delta.Scale3D;
+
+                SkelComp->SetBoneLocalTransform(BoneIndex, FinalTransform);
             }
         }
     }
@@ -779,6 +792,7 @@ void SPreviewWindow::TimelineRecord(ViewerState* State)
                         State->CurrentAnimation = NewAnim;
                         State->CurrentAnimationTime = 0.0f;
                         State->EditedBoneTransforms.clear();
+                        State->AnimationBoneTransforms.clear();
                         State->bIsPlaying = false;
 
                         if (NewAnim->GetDataModel())

@@ -422,6 +422,7 @@ void SPreviewWindow::OnRender()
                                         ActiveState->CurrentAnimationTime = 0.0f;
                                         // 편집된 bone transform 캐시 클리어 (새로운 메시/애니메이션 로드)
                                         ActiveState->EditedBoneTransforms.clear();
+                                        ActiveState->AnimationBoneTransforms.clear();
 
                                         // Notify Track 복원
                                         RebuildNotifyTracks(ActiveState);
@@ -469,6 +470,7 @@ void SPreviewWindow::OnRender()
                                         ActiveState->bIsPlaying = false;
                                         // 편집된 bone transform 캐시 클리어
                                         ActiveState->EditedBoneTransforms.clear();
+                                        ActiveState->AnimationBoneTransforms.clear();
                                     }
                                 }
                             }
@@ -705,11 +707,14 @@ void SPreviewWindow::OnRender()
 
                                 if (ActiveState->PreviewActor && ActiveState->World)
                                 {
+                                    if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                    {
+                                        // BoneAnchor에 ViewerState 먼저 설정 (RepositionAnchorToBone에서 사용)
+                                        Anchor->SetViewerState(ActiveState);
+                                    }
                                     ActiveState->PreviewActor->RepositionAnchorToBone(Index);
                                     if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
                                     {
-                                        // BoneAnchor에 ViewerState 설정 (편집된 transform 캐시 접근용)
-                                        Anchor->SetViewerState(ActiveState);
                                         ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
                                         ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
                                     }
@@ -841,6 +846,7 @@ void SPreviewWindow::OnRender()
                         ActiveState->CurrentAnimation = Animations[0];
                         ActiveState->CurrentAnimationTime = 0.0f;
                         ActiveState->EditedBoneTransforms.clear();
+                        ActiveState->AnimationBoneTransforms.clear();
                         RebuildNotifyTracks(ActiveState);
                         ActiveState->bIsPlaying = true;
                     }
@@ -1433,6 +1439,7 @@ void SPreviewWindow::OnRender()
                                         ActiveState->CurrentAnimation = NewAnim;
                                         ActiveState->CurrentAnimationTime = 0.0f;
                                         ActiveState->EditedBoneTransforms.clear();
+                                        ActiveState->AnimationBoneTransforms.clear();
                                         ActiveState->bIsPlaying = true;
 
                                         if (NewAnim->GetDataModel())
@@ -1541,6 +1548,7 @@ void SPreviewWindow::OnRender()
                             ActiveState->CurrentAnimation = Anim;
                             ActiveState->CurrentAnimationTime = 0.0f;
                             ActiveState->EditedBoneTransforms.clear();
+                            ActiveState->AnimationBoneTransforms.clear();
                             RebuildNotifyTracks(ActiveState);
                             ActiveState->bIsPlaying = true;
 
@@ -1816,15 +1824,27 @@ void SPreviewWindow::OnUpdate(float DeltaSeconds)
 
         SkelComp->SetTickEnabled(bShouldTick);
 
-        // 애니메이션 업데이트 후, 에디터에서 편집된 본 트랜스폼 재적용
-        // (0c3c88a 커밋 이전에 UpdateBonesFromAnimation에서 수행하던 로직)
+        // 애니메이션 업데이트 후, 에디터에서 편집된 본 트랜스폼 델타 적용
         if (ActiveState->ViewMode == EViewerMode::Animation && !ActiveState->EditedBoneTransforms.empty())
         {
             for (const auto& Pair : ActiveState->EditedBoneTransforms)
             {
                 int32 BoneIndex = Pair.first;
-                const FTransform& EditedTransform = Pair.second;
-                SkelComp->SetBoneLocalTransform(BoneIndex, EditedTransform);
+                const FTransform& Delta = Pair.second;
+
+                // 현재 애니메이션 트랜스폼 가져오기
+                FTransform AnimTransform = SkelComp->GetBoneLocalTransform(BoneIndex);
+
+                // 델타 계산용으로 현재 애니메이션 트랜스폼 저장
+                ActiveState->AnimationBoneTransforms[BoneIndex] = AnimTransform;
+
+                // 델타 적용: Position=덧셈, Rotation=곱셈, Scale=곱셈
+                FTransform FinalTransform;
+                FinalTransform.Translation = AnimTransform.Translation + Delta.Translation;
+                FinalTransform.Rotation = (AnimTransform.Rotation * Delta.Rotation).GetNormalized();
+                FinalTransform.Scale3D = AnimTransform.Scale3D * Delta.Scale3D;
+
+                SkelComp->SetBoneLocalTransform(BoneIndex, FinalTransform);
             }
         }
 
@@ -1916,11 +1936,14 @@ void SPreviewWindow::OnMouseDown(FVector2D MousePos, uint32 Button)
                         ExpandToSelectedBone(ActiveState, PickedBoneIndex);
 
                         // Move gizmo to the selected bone
+                        if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                        {
+                            // BoneAnchor에 ViewerState 먼저 설정 (RepositionAnchorToBone에서 사용)
+                            Anchor->SetViewerState(ActiveState);
+                        }
                         ActiveState->PreviewActor->RepositionAnchorToBone(PickedBoneIndex);
                         if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
                         {
-                            // BoneAnchor에 ViewerState 설정 (편집된 transform 캐시 접근용)
-                            Anchor->SetViewerState(ActiveState);
                             ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
                             ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
                         }
@@ -2073,6 +2096,7 @@ void SPreviewWindow::LoadSkeletalMesh(const FString& Path)
             ActiveState->CurrentAnimation = Animations[0];
             ActiveState->CurrentAnimationTime = 0.0f;
             ActiveState->EditedBoneTransforms.clear();
+            ActiveState->AnimationBoneTransforms.clear();
             RebuildNotifyTracks(ActiveState);
             ActiveState->bIsPlaying = true;
         }

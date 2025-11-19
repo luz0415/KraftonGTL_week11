@@ -827,137 +827,14 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
             	}
             }
 
+            // ==========================================
+            // Animation Asset Section
+            // ==========================================
             ImGui::Spacing();
-
-            // Animation Sequence 선택
-            if (ImGui::Button("Select AnimSequence...", ImVec2(-1, 0)))
-            {
-                ImGui::OpenPopup("AnimSequenceSelector");
-            }
-
-            // Animation Sequence 선택 팝업
-            if (ImGui::BeginPopup("AnimSequenceSelector"))
-            {
-                ImGui::TextDisabled("Select Animation Sequence");
-                ImGui::Separator();
-                ImGui::Spacing();
-
-            	TArray<UAnimSequence*> Sequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();
-
-                if (Sequences.empty())
-                {
-                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.4f, 1.0f), "No animations available");
-                }
-                else
-                {
-                    // 검색 필터
-                    static char SearchBuf[128] = "";
-                    ImGui::SetNextItemWidth(-1);
-                    ImGui::InputTextWithHint("##AnimSearch", "Search...", SearchBuf, sizeof(SearchBuf));
-                    ImGui::Spacing();
-                    ImGui::Separator();
-
-                    ImGui::BeginChild("AnimList", ImVec2(300, 400), true);
-
-                    for (UAnimSequence* Seq : Sequences)
-                    {
-                        if (!Seq) continue;
-
-                        FString AnimName = Seq->GetFilePath();
-
-                        // 검색 필터 적용
-                        if (SearchBuf[0] != '\0')
-                        {
-                            std::string NameStr = AnimName.c_str();
-                            std::string SearchStr = SearchBuf;
-                            // 대소문자 구분 없이 검색
-                            std::ranges::transform(NameStr, NameStr.begin(), ::tolower);
-                            std::ranges::transform(SearchStr, SearchStr.begin(), ::tolower);
-
-                            if (NameStr.find(SearchStr) == std::string::npos) { continue; }
-                        }
-
-                        bool bIsSelected = (SelectedNode->AnimSequence == Seq);
-
-                        if (ImGui::Selectable(AnimName.c_str(), bIsSelected))
-                        {
-                            SelectedNode->AnimSequence = Seq;
-
-                            // StateMachine에 반영
-                            if (ActiveState->StateMachine)
-                            {
-                                FName NodeName(SelectedNode->Name);
-                                if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(NodeName))
-                                {
-                                    StateNode->AnimAssetType = EAnimAssetType::AnimSequence;
-                                    StateNode->AnimationAsset = Seq;
-                                    StateNode->BlendSpaceAsset = nullptr;
-                                }
-                            }
-
-                            ImGui::CloseCurrentPopup();
-                        }
-
-                        if (bIsSelected)
-                        {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-
-                    ImGui::EndChild();
-                }
-
-                ImGui::Spacing();
-                if (ImGui::Button("Close", ImVec2(-1, 0)))
-                {
-                    ImGui::CloseCurrentPopup();
-                }
-
-                ImGui::EndPopup();
-            }
-
-            // BlendSpace2D 선택
-        	if (ImGui::Button("Select BlendSpace2D...", ImVec2(-1, 0)))
-        	{
-        		// 1. 다이얼로그 설정
-        		const FWideString BaseDir = UTF8ToWide(GDataDir) + L"/Animation";
-        		const FWideString Extension = L".blend2d";
-        		const FWideString Description = L"BlendSpace2D Files";
-
-        		// 2. 파일 선택 다이얼로그 열기 (SelectedPath는 ABSOLUTE PATH)
-        		std::filesystem::path SelectedPath = FPlatformProcess::OpenLoadFileDialog(BaseDir, Extension, Description);
-
-        		if (!SelectedPath.empty())
-        		{
-        			// Absolute Path
-        			FWideString AbsolutePath = SelectedPath.wstring();
-
-        			// Relative Path
-        			FString FinalPathStr = ResolveAssetRelativePath(WideToUTF8(AbsolutePath), "");
-
-        			UBlendSpace2D* LoadedBlendSpace = UBlendSpace2D::LoadFromFile(FinalPathStr);
-
-        			if (LoadedBlendSpace)
-        			{
-        				// StateMachine에 반영
-        				if (ActiveState->StateMachine)
-        				{
-        					FName NodeName(SelectedNode->Name);
-        					if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(NodeName))
-        					{
-        						// StateNode에 로드된 에셋 포인터 할당
-        						StateNode->AnimAssetType = EAnimAssetType::BlendSpace2D;
-        						StateNode->AnimationAsset = nullptr;
-        						StateNode->BlendSpaceAsset = LoadedBlendSpace;
-        					}
-        				}
-        			}
-        			else
-        			{
-        				UE_LOG("[Error] Failed to load BlendSpace2D from file: %S", AbsolutePath.c_str());
-        			}
-        		}
-        	}
+            ImGui::Spacing();
+            ImGui::TextDisabled("Animation Asset");
+            ImGui::Spacing();
+            ImGui::Spacing();
 
             // 현재 애셋 표시
             if (ActiveState->StateMachine)
@@ -965,28 +842,142 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
                 FName NodeName(SelectedNode->Name);
                 if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(NodeName))
                 {
+                    // 현재 선택된 애셋 정보 박스
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+                    ImGui::BeginChild("AssetInfo", ImVec2(-1, 50), true);
+
                     if (StateNode->AnimAssetType == EAnimAssetType::AnimSequence && StateNode->AnimationAsset)
                     {
-                        ImGui::Text("Type: AnimSequence");
-                        ImGui::Text("Current: %s", StateNode->AnimationAsset->GetFilePath().c_str());
+                        ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.4f, 1.0f), "AnimSequence");
+                        ImGui::TextWrapped("%s", StateNode->AnimationAsset->GetFilePath().c_str());
                     }
                     else if (StateNode->AnimAssetType == EAnimAssetType::BlendSpace2D && StateNode->BlendSpaceAsset)
                     {
-                        ImGui::Text("Type: BlendSpace2D");
-                        ImGui::Text("Current: %s", StateNode->BlendSpaceAsset->GetFilePath().c_str());
+                        ImGui::TextColored(ImVec4(0.4f, 0.6f, 1.0f, 1.0f), "BlendSpace2D");
+                        ImGui::TextWrapped("%s", StateNode->BlendSpaceAsset->GetFilePath().c_str());
                     }
                     else
                     {
-                        ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.4f, 1.0f), "No Asset Selected");
+                        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No Asset Selected");
                     }
 
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor();
+
+                    // 버튼들
+                    float ButtonWidth = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2) / 3.0f;
+
+                    if (ImGui::Button("AnimSeq", ImVec2(ButtonWidth, 0)))
+                    {
+                        ImGui::OpenPopup("AnimSequenceSelector");
+                    }
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("Clear"))
+                    if (ImGui::Button("Blend2D", ImVec2(ButtonWidth, 0)))
+                    {
+                        // BlendSpace2D 선택 다이얼로그
+                        const FWideString BaseDir = UTF8ToWide(GDataDir) + L"/Animation";
+                        const FWideString Extension = L".blend2d";
+                        const FWideString Description = L"BlendSpace2D Files";
+
+                        std::filesystem::path SelectedPath = FPlatformProcess::OpenLoadFileDialog(BaseDir, Extension, Description);
+
+                        if (!SelectedPath.empty())
+                        {
+                            FWideString AbsolutePath = SelectedPath.wstring();
+                            FString FinalPathStr = ResolveAssetRelativePath(WideToUTF8(AbsolutePath), "");
+                            UBlendSpace2D* LoadedBlendSpace = UBlendSpace2D::LoadFromFile(FinalPathStr);
+
+                            if (LoadedBlendSpace)
+                            {
+                                StateNode->AnimAssetType = EAnimAssetType::BlendSpace2D;
+                                StateNode->AnimationAsset = nullptr;
+                                StateNode->BlendSpaceAsset = LoadedBlendSpace;
+                            }
+                            else
+                            {
+                                UE_LOG("[Error] Failed to load BlendSpace2D from file: %S", AbsolutePath.c_str());
+                            }
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Clear", ImVec2(ButtonWidth, 0)))
                     {
                         SelectedNode->AnimSequence = nullptr;
                         StateNode->AnimAssetType = EAnimAssetType::None;
                         StateNode->AnimationAsset = nullptr;
                         StateNode->BlendSpaceAsset = nullptr;
+                    }
+
+                    // Animation Sequence 선택 팝업
+                    if (ImGui::BeginPopup("AnimSequenceSelector"))
+                    {
+                        ImGui::TextDisabled("Select Animation Sequence");
+                        ImGui::Separator();
+                        ImGui::Spacing();
+
+                        TArray<UAnimSequence*> Sequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();
+
+                        if (Sequences.empty())
+                        {
+                            ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.4f, 1.0f), "No animations available");
+                        }
+                        else
+                        {
+                            // 검색 필터
+                            static char SearchBuf[128] = "";
+                            ImGui::SetNextItemWidth(-1);
+                            ImGui::InputTextWithHint("##AnimSearch", "Search...", SearchBuf, sizeof(SearchBuf));
+                            ImGui::Spacing();
+                            ImGui::Separator();
+
+                            ImGui::BeginChild("AnimList", ImVec2(300, 400), true);
+
+                            for (UAnimSequence* Seq : Sequences)
+                            {
+                                if (!Seq) continue;
+
+                                FString AnimName = Seq->GetFilePath();
+                                // .anim 파일만 표시
+                                if (!AnimName.ends_with(".anim")) continue;
+
+                                // 검색 필터 적용
+                                if (SearchBuf[0] != '\0')
+                                {
+                                    std::string NameStr = AnimName.c_str();
+                                    std::string SearchStr = SearchBuf;
+                                    std::ranges::transform(NameStr, NameStr.begin(), ::tolower);
+                                    std::ranges::transform(SearchStr, SearchStr.begin(), ::tolower);
+
+                                    if (NameStr.find(SearchStr) == std::string::npos) { continue; }
+                                }
+
+                                bool bIsSelected = (StateNode->AnimationAsset == Seq);
+
+                                if (ImGui::Selectable(AnimName.c_str(), bIsSelected))
+                                {
+                                    SelectedNode->AnimSequence = Seq;
+                                    StateNode->AnimAssetType = EAnimAssetType::AnimSequence;
+                                    StateNode->AnimationAsset = Seq;
+                                    StateNode->BlendSpaceAsset = nullptr;
+                                    ImGui::CloseCurrentPopup();
+                                }
+
+                                if (bIsSelected)
+                                {
+                                    ImGui::SetItemDefaultFocus();
+                                }
+                            }
+
+                            ImGui::EndChild();
+                        }
+
+                        ImGui::Spacing();
+                        if (ImGui::Button("Close", ImVec2(-1, 0)))
+                        {
+                            ImGui::CloseCurrentPopup();
+                        }
+
+                        ImGui::EndPopup();
                     }
                 }
             }
@@ -999,6 +990,7 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.4f, 1.0f), "No Asset Selected");
             }
 
+            ImGui::Spacing();
             ImGui::Spacing();
 
             // Loop 옵션
@@ -1019,10 +1011,14 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
             }
 
             ImGui::Spacing();
+            ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
+            ImGui::Spacing();
 
+            // ==========================================
             // State Notifies
+            // ==========================================
             if (ActiveState->StateMachine)
             {
                 FName nodeName(SelectedNode->Name);
@@ -1031,116 +1027,138 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
                 {
                     ImGui::TextDisabled("State Notifies");
                     ImGui::Spacing();
+                    ImGui::Spacing();
 
+                    // ------------------------------------------
                     // Entry Notifies
-                    if (ImGui::TreeNode("Entry Notifies"))
+                    // ------------------------------------------
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                    ImGui::Text("Entry Notifies");
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    int32 entryNotifyToDelete = -1;
+                    for (int32 i = 0; i < StateNode->StateEntryNotifies.Num(); ++i)
                     {
-                        int32 notifyToDelete = -1;
-                        for (int32 i = 0; i < StateNode->StateEntryNotifies.Num(); ++i)
+                        FAnimNotifyEvent& Notify = StateNode->StateEntryNotifies[i];
+                        ImGui::PushID(("Entry" + std::to_string(i)).c_str());
+
+                        RenderNotifyCombo("##NotifyName", Notify);
+
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("X"))
                         {
-                            FAnimNotifyEvent& Notify = StateNode->StateEntryNotifies[i];
-                            ImGui::PushID(i);
-
-                            RenderNotifyCombo("##NotifyName", Notify);
-
-                            ImGui::SameLine();
-                            if (ImGui::SmallButton("X"))
-                            {
-                                notifyToDelete = i;
-                            }
-
-                            ImGui::PopID();
+                            entryNotifyToDelete = i;
                         }
 
-                        if (notifyToDelete != -1)
-                        {
-                            StateNode->StateEntryNotifies.RemoveAt(notifyToDelete);
-                        }
-
-                        if (ImGui::Button("Add Entry Notify", ImVec2(-1, 0)))
-                        {
-                            FAnimNotifyEvent NewNotify;
-                            NewNotify.NotifyName = FName("NewEntryNotify");
-                            NewNotify.TriggerTime = 0.0f;
-                            NewNotify.Duration = 0.0f;
-                            StateNode->StateEntryNotifies.Add(NewNotify);
-                        }
-
-                        ImGui::TreePop();
+                        ImGui::PopID();
                     }
 
+                    if (entryNotifyToDelete != -1)
+                    {
+                        StateNode->StateEntryNotifies.RemoveAt(entryNotifyToDelete);
+                    }
+
+                    ImGui::Spacing();
+                    if (ImGui::Button("+ Add Entry", ImVec2(-1, 0)))
+                    {
+                        FAnimNotifyEvent NewNotify;
+                        NewNotify.NotifyName = FName("NewEntryNotify");
+                        NewNotify.TriggerTime = 0.0f;
+                        NewNotify.Duration = 0.0f;
+                        StateNode->StateEntryNotifies.Add(NewNotify);
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    // ------------------------------------------
                     // Exit Notifies
-                    if (ImGui::TreeNode("Exit Notifies"))
+                    // ------------------------------------------
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.4f, 1.0f));
+                    ImGui::Text("Exit Notifies");
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    int32 exitNotifyToDelete = -1;
+                    for (int32 i = 0; i < StateNode->StateExitNotifies.Num(); ++i)
                     {
-                        int32 notifyToDelete = -1;
-                        for (int32 i = 0; i < StateNode->StateExitNotifies.Num(); ++i)
+                        FAnimNotifyEvent& Notify = StateNode->StateExitNotifies[i];
+                        ImGui::PushID(("Exit" + std::to_string(i)).c_str());
+
+                        RenderNotifyCombo("##NotifyName", Notify);
+
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("X"))
                         {
-                            FAnimNotifyEvent& Notify = StateNode->StateExitNotifies[i];
-                            ImGui::PushID(i);
-
-                            RenderNotifyCombo("##NotifyName", Notify);
-
-                            ImGui::SameLine();
-                            if (ImGui::SmallButton("X"))
-                            {
-                                notifyToDelete = i;
-                            }
-
-                            ImGui::PopID();
+                            exitNotifyToDelete = i;
                         }
 
-                        if (notifyToDelete != -1)
-                        {
-                            StateNode->StateExitNotifies.RemoveAt(notifyToDelete);
-                        }
-
-                        if (ImGui::Button("Add Exit Notify", ImVec2(-1, 0)))
-                        {
-                            FAnimNotifyEvent NewNotify;
-                            NewNotify.NotifyName = FName("NewExitNotify");
-                            NewNotify.TriggerTime = 0.0f;
-                            NewNotify.Duration = 0.0f;
-                            StateNode->StateExitNotifies.Add(NewNotify);
-                        }
-
-                        ImGui::TreePop();
+                        ImGui::PopID();
                     }
 
-                    // Fully Blended Notifies
-                    if (ImGui::TreeNode("Fully Blended Notifies"))
+                    if (exitNotifyToDelete != -1)
                     {
-                        int32 notifyToDelete = -1;
-                        for (int32 i = 0; i < StateNode->StateFullyBlendedNotifies.Num(); ++i)
+                        StateNode->StateExitNotifies.RemoveAt(exitNotifyToDelete);
+                    }
+
+                    ImGui::Spacing();
+                    if (ImGui::Button("+ Add Exit", ImVec2(-1, 0)))
+                    {
+                        FAnimNotifyEvent NewNotify;
+                        NewNotify.NotifyName = FName("NewExitNotify");
+                        NewNotify.TriggerTime = 0.0f;
+                        NewNotify.Duration = 0.0f;
+                        StateNode->StateExitNotifies.Add(NewNotify);
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    // ------------------------------------------
+                    // Fully Blended Notifies
+                    // ------------------------------------------
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.8f, 1.0f, 1.0f));
+                    ImGui::Text("Fully Blended Notifies");
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    int32 blendedNotifyToDelete = -1;
+                    for (int32 i = 0; i < StateNode->StateFullyBlendedNotifies.Num(); ++i)
+                    {
+                        FAnimNotifyEvent& Notify = StateNode->StateFullyBlendedNotifies[i];
+                        ImGui::PushID(("Blended" + std::to_string(i)).c_str());
+
+                        RenderNotifyCombo("##NotifyName", Notify);
+
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("X"))
                         {
-                            FAnimNotifyEvent& Notify = StateNode->StateFullyBlendedNotifies[i];
-                            ImGui::PushID(i);
-
-                            RenderNotifyCombo("##NotifyName", Notify);
-
-                            ImGui::SameLine();
-                            if (ImGui::SmallButton("X"))
-                            {
-                                notifyToDelete = i;
-                            }
-
-                            ImGui::PopID();
+                            blendedNotifyToDelete = i;
                         }
 
-                        if (notifyToDelete != -1)
-                        {
-                            StateNode->StateFullyBlendedNotifies.RemoveAt(notifyToDelete);
-                        }
+                        ImGui::PopID();
+                    }
 
-                        if (ImGui::Button("Add Fully Blended Notify", ImVec2(-1, 0)))
-                        {
-                            FAnimNotifyEvent NewNotify;
-                            NewNotify.NotifyName = FName("NewBlendedNotify");
-                            NewNotify.TriggerTime = 0.0f;
-                            NewNotify.Duration = 0.0f;
-                            StateNode->StateFullyBlendedNotifies.Add(NewNotify);
-                        }
+                    if (blendedNotifyToDelete != -1)
+                    {
+                        StateNode->StateFullyBlendedNotifies.RemoveAt(blendedNotifyToDelete);
+                    }
 
-                        ImGui::TreePop();
+                    ImGui::Spacing();
+                    if (ImGui::Button("+ Add Fully Blended", ImVec2(-1, 0)))
+                    {
+                        FAnimNotifyEvent NewNotify;
+                        NewNotify.NotifyName = FName("NewBlendedNotify");
+                        NewNotify.TriggerTime = 0.0f;
+                        NewNotify.Duration = 0.0f;
+                        StateNode->StateFullyBlendedNotifies.Add(NewNotify);
                     }
                 }
             }
@@ -1164,77 +1182,76 @@ void SAnimStateMachineWindow::RenderRightPanel(float width, float height)
 
             if (FromNode && ToNode && ActiveState->StateMachine)
             {
-                // 1. 기본 정보 표시
-                ImGui::Text("From: %s", FromNode->Name.c_str());
-                ImGui::Text("To:   %s", ToNode->Name.c_str());
+                // UI 레이아웃 상수
+                const float ContentWidth = ImGui::GetContentRegionAvail().x;
 
-                ImGui::Spacing();
-
-                // 2. [New] 우선순위(Priority) 표시 및 변경 버튼
-                int32 CurrentPriority = ActiveState->StateMachine->GetTransitionPriority(FName(FromNode->Name), FName(ToNode->Name));
-
-                ImGui::AlignTextToFramePadding(); // 텍스트와 버튼 수직 정렬 맞춤
-                ImGui::Text("Priority: %d", CurrentPriority);
-                ImGui::SameLine();
-
-                // (Tip) 0번이 최상위이므로 낮은 숫자가 높은 우선순위임을 툴팁으로 알려주면 좋음
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Lower index means higher priority (checked first).");
-
-                // 오른쪽 정렬 느낌을 위해 커서 이동 (선택 사항)
-                // ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 80);
-
-                // [위로 이동 버튼] (인덱스 감소)
-                if (ImGui::ArrowButton("##TransUp", ImGuiDir_Up))
+                // 1. 기본 정보 표시 (박스 스타일)
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+                ImGui::BeginChild("TransitionInfo", ImVec2(-1, 60), true);
                 {
-                    // -1: 인덱스를 줄임 = 배열 앞쪽으로 이동 = 우선순위 상승
-                    ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), -1);
-                }
+                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "%s", FromNode->Name.c_str());
+                    ImGui::SameLine();
+                    ImGui::TextDisabled(" -> ");
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.8f, 0.6f, 0.4f, 1.0f), "%s", ToNode->Name.c_str());
 
-                ImGui::SameLine();
+                    ImGui::Spacing();
 
-                // [아래로 이동 버튼] (인덱스 증가)
-                if (ImGui::ArrowButton("##TransDown", ImGuiDir_Down))
-                {
-                    // +1: 인덱스를 늘림 = 배열 뒤쪽으로 이동 = 우선순위 하락
-                    ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), 1);
-                }
+                    // Priority와 Blend Time을 한 줄에 배치
+                    int32 CurrentPriority = ActiveState->StateMachine->GetTransitionPriority(FName(FromNode->Name), FName(ToNode->Name));
 
-                ImGui::Separator();
-                ImGui::Spacing();
-
-                // 3. Blend Time (기존 코드)
-                float blendTime = SelectedLink->BlendTime;
-                if (ImGui::DragFloat("Blend Time", &blendTime, 0.01f, 0.0f, 5.0f))
-                {
-                    SelectedLink->BlendTime = blendTime;
-                    // 데이터 갱신
-                    if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(FName(FromNode->Name)))
+                    ImGui::TextDisabled("Priority:");
+                    ImGui::SameLine();
+                    ImGui::Text("%d", CurrentPriority);
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("^"))
                     {
-                        for (auto& Trans : StateNode->Transitions)
+                        ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), -1);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("v"))
+                    {
+                        ActiveState->StateMachine->MoveTransitionPriority(FName(FromNode->Name), FName(ToNode->Name), 1);
+                    }
+
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("  Blend:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(60);
+                    float blendTime = SelectedLink->BlendTime;
+                    if (ImGui::DragFloat("##BlendTime", &blendTime, 0.01f, 0.0f, 5.0f, "%.2fs"))
+                    {
+                        SelectedLink->BlendTime = blendTime;
+                        if (FAnimStateNode* StateNode = ActiveState->StateMachine->GetNodes().Find(FName(FromNode->Name)))
                         {
-                            if (Trans.TargetStateName == FName(ToNode->Name))
+                            for (auto& Trans : StateNode->Transitions)
                             {
-                                Trans.BlendTime = blendTime;
-                                break;
+                                if (Trans.TargetStateName == FName(ToNode->Name))
+                                {
+                                    Trans.BlendTime = blendTime;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
+                ImGui::EndChild();
+                ImGui::PopStyleColor();
 
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
 
                 // ==========================================================
-                // Conditions
+                // Conditions (두 줄 레이아웃)
                 // ==========================================================
-ImGui::TextDisabled("Transition Conditions");
+                ImGui::TextDisabled("CONDITIONS");
                 ImGui::Spacing();
 
                 bool bCanEditData = (FromNode && ToNode && ActiveState->StateMachine);
                 int conditionToDelete = -1;
 
+                ImGui::PushID("Conditions");
                 for (int i = 0; i < SelectedLink->Conditions.size(); ++i)
                 {
                     auto& Cond = SelectedLink->Conditions[i];
@@ -1242,93 +1259,89 @@ ImGui::TextDisabled("Transition Conditions");
 
                     ImGui::PushID(i);
 
-                    // ------------------------------------------------------
-                    // 1. [New] Condition Type (Combo)
-                    // ------------------------------------------------------
-                    ImGui::SetNextItemWidth(110);
-                    if (ImGui::BeginCombo("##Type", GetConditionTypeString(Cond.Type)))
+                    // 조건 박스 (시각적 구분)
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+                    ImGui::BeginChild("CondBox", ImVec2(-1, 52), true);
                     {
-                        // Enum 순회 (0: Parameter, 1: TimeRemaining, 2: CurrentTime)
-                        for (int type_i = 0; type_i <= (int)EAnimConditionType::CurrentTime; ++type_i)
+                        // 첫 번째 줄: Type과 Parameter Name
+                        ImGui::TextDisabled("Type:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(100);
+                        if (ImGui::BeginCombo("##Type", GetConditionTypeString(Cond.Type)))
                         {
-                            EAnimConditionType type = (EAnimConditionType)type_i;
-                            const bool bIsSelected = (Cond.Type == type);
-
-                            if (ImGui::Selectable(GetConditionTypeString(type), bIsSelected))
+                            for (int type_i = 0; type_i <= (int)EAnimConditionType::CurrentTime; ++type_i)
                             {
-                                Cond.Type = type;
+                                EAnimConditionType type = (EAnimConditionType)type_i;
+                                const bool bIsSelected = (Cond.Type == type);
+                                if (ImGui::Selectable(GetConditionTypeString(type), bIsSelected))
+                                {
+                                    Cond.Type = type;
+                                    bDataChanged = true;
+                                }
+                                if (bIsSelected) ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        // Parameter 타입일 때만 파라미터 이름 표시
+                        if (Cond.Type == EAnimConditionType::Parameter)
+                        {
+                            ImGui::SameLine();
+                            ImGui::TextDisabled("Param:");
+                            ImGui::SameLine();
+                            char paramBuf[128];
+                            strcpy_s(paramBuf, Cond.ParameterName.ToString().c_str());
+                            ImGui::SetNextItemWidth(80);
+                            if (ImGui::InputText("##ParamName", paramBuf, sizeof(paramBuf)))
+                            {
+                                Cond.ParameterName = paramBuf;
                                 bDataChanged = true;
                             }
-                            if (bIsSelected) ImGui::SetItemDefaultFocus();
                         }
-                        ImGui::EndCombo();
-                    }
 
-                    ImGui::SameLine();
-
-                    // ------------------------------------------------------
-                    // 2. Parameter Name (InputText) - Parameter 타입일 때만 표시
-                    // ------------------------------------------------------
-                    if (Cond.Type == EAnimConditionType::Parameter)
-                    {
-                        char paramBuf[128];
-                        strcpy_s(paramBuf, Cond.ParameterName.ToString().c_str());
-                        ImGui::SetNextItemWidth(100);
-                        if (ImGui::InputText("##ParamName", paramBuf, sizeof(paramBuf)))
+                        // 삭제 버튼 (오른쪽 정렬)
+                        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 20);
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.5f, 0.1f, 0.1f, 1.0f));
+                        if (ImGui::SmallButton("X"))
                         {
-                            Cond.ParameterName = paramBuf;
+                            conditionToDelete = i;
+                        }
+                        ImGui::PopStyleColor(3);
+
+                        // 두 번째 줄: Operator와 Threshold
+                        ImGui::TextDisabled("Compare:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(50);
+                        if (ImGui::BeginCombo("##Op", GetConditionOpString(Cond.Op)))
+                        {
+                            for (int op_i = 0; op_i <= (int)EAnimConditionOp::LessOrEqual; ++op_i)
+                            {
+                                EAnimConditionOp op = (EAnimConditionOp)op_i;
+                                const bool bIsSelected = (Cond.Op == op);
+                                if (ImGui::Selectable(GetConditionOpString(op), bIsSelected))
+                                {
+                                    Cond.Op = op;
+                                    bDataChanged = true;
+                                }
+                                if (bIsSelected) ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("Value:");
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(60);
+                        float step = (Cond.Type == EAnimConditionType::TimeRemainingRatio) ? 0.01f : 0.1f;
+                        if (ImGui::DragFloat("##Threshold", &Cond.Threshold, step, 0.0f, 0.0f, "%.2f"))
+                        {
                             bDataChanged = true;
                         }
-                        ImGui::SameLine();
                     }
-                    else
-                    {
-                        // Parameter가 아닐 때는 이름 입력 불필요 (공간만 채우거나 비워둠)
-                        // ImGui::TextDisabled(" (Internal) ");
-                        // ImGui::SameLine();
-                    }
-
-                    // ------------------------------------------------------
-                    // 3. Operator (Combo)
-                    // ------------------------------------------------------
-                    ImGui::SetNextItemWidth(50); // 너비 조금 줄임
-                    if (ImGui::BeginCombo("##Op", GetConditionOpString(Cond.Op)))
-                    {
-                        for (int op_i = 0; op_i <= (int)EAnimConditionOp::LessOrEqual; ++op_i)
-                        {
-                            EAnimConditionOp op = (EAnimConditionOp)op_i;
-                            const bool bIsSelected = (Cond.Op == op);
-                            if (ImGui::Selectable(GetConditionOpString(op), bIsSelected))
-                            {
-                                Cond.Op = op;
-                                bDataChanged = true;
-                            }
-                            if (bIsSelected) ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::SameLine();
-
-                    // ------------------------------------------------------
-                    // 4. Threshold (DragFloat)
-                    // ------------------------------------------------------
-                    ImGui::SetNextItemWidth(60);
-                    // TimeRemainingRatio는 0.0~1.0 사이 값이므로 Step을 작게
-                    float step = (Cond.Type == EAnimConditionType::TimeRemainingRatio) ? 0.01f : 0.1f;
-
-                    if (ImGui::DragFloat("##Threshold", &Cond.Threshold, step))
-                    {
-                        bDataChanged = true;
-                    }
-
-                    ImGui::SameLine();
-
-                    // 5. Delete Button
-                    if (ImGui::SmallButton("X"))
-                    {
-                        conditionToDelete = i;
-                    }
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor();
 
                     if (bDataChanged && bCanEditData)
                     {
@@ -1348,44 +1361,40 @@ ImGui::TextDisabled("Transition Conditions");
                 // 삭제 로직 실행 (루프 밖에서)
                 if (conditionToDelete != -1 && bCanEditData)
                 {
-                    // 1. StateMachine에서 삭제
                     ActiveState->StateMachine->RemoveConditionFromTransition(
                         FName(FromNode->Name),
                         FName(ToNode->Name),
                         conditionToDelete
                     );
-                    // 2. UI 리스트에서 삭제
                     SelectedLink->Conditions.erase(SelectedLink->Conditions.begin() + conditionToDelete);
                 }
+                ImGui::PopID(); // "Conditions"
 
                 ImGui::Spacing();
 
-            	if (ImGui::Button("Add Condition", ImVec2(-1, 0)))
-            	{
-            		if (bCanEditData)
-            		{
-            			// 기본값: 남은 시간 10% 미만일 때 (자주 쓰는 조건)
-            			FAnimCondition NewRealCond;
-            			NewRealCond.Type = EAnimConditionType::TimeRemainingRatio; // 기본 타입
-            			NewRealCond.ParameterName = FName("None");
-            			NewRealCond.Op = EAnimConditionOp::Less;
-            			NewRealCond.Threshold = 0.1f;
+                if (ImGui::Button("+ Add Condition", ImVec2(-1, 25)))
+                {
+                    if (bCanEditData)
+                    {
+                        FAnimCondition NewRealCond;
+                        NewRealCond.Type = EAnimConditionType::TimeRemainingRatio;
+                        NewRealCond.ParameterName = FName("None");
+                        NewRealCond.Op = EAnimConditionOp::Less;
+                        NewRealCond.Threshold = 0.1f;
 
-            			// StateMachine에 추가
-            			ActiveState->StateMachine->AddConditionToTransition(FromNode->Name, ToNode->Name, NewRealCond);
-
-            			// UI 리스트에도 추가
-            			SelectedLink->Conditions.push_back(NewRealCond);
-            		}
-            	}
-
+                        ActiveState->StateMachine->AddConditionToTransition(FromNode->Name, ToNode->Name, NewRealCond);
+                        SelectedLink->Conditions.push_back(NewRealCond);
+                    }
+                }
 
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
 
+                // ==========================================================
                 // Transition Notifies
-                ImGui::TextDisabled("Transition Notifies");
+                // ==========================================================
+                ImGui::TextDisabled("TRANSITION NOTIFIES");
                 ImGui::Spacing();
 
                 if (bCanEditData)
@@ -1396,30 +1405,47 @@ ImGui::TextDisabled("Transition Conditions");
 
                     if (Trans)
                     {
+                        ImGui::PushID("TransitionNotifies");
                         int32 notifyToDelete = -1;
+
                         for (int32 i = 0; i < Trans->TransitionNotifies.Num(); ++i)
                         {
                             FAnimNotifyEvent& Notify = Trans->TransitionNotifies[i];
                             ImGui::PushID(i);
 
-                            // Notify Name (드롭다운)
-                            RenderNotifyCombo("##NotifyName", Notify);
-
-                            ImGui::SameLine();
-
-                            // Trigger Time (0.0 ~ 1.0)
-                            ImGui::SetNextItemWidth(80);
-                            ImGui::DragFloat("##TriggerTime", &Notify.TriggerTime, 0.01f, 0.0f, 1.0f, "%.2f");
-                            if (ImGui::IsItemHovered())
+                            // Notify 박스
+                            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.18f, 0.15f, 0.15f, 1.0f));
+                            ImGui::BeginChild("NotifyBox", ImVec2(-1, 28), true);
                             {
-                                ImGui::SetTooltip("Transition progress (0.0 ~ 1.0)");
-                            }
+                                // Notify Name (드롭다운) - 너비 조정
+                                ImGui::SetNextItemWidth(120);
+                                RenderNotifyCombo("##NotifyName", Notify);
 
-                            ImGui::SameLine();
-                            if (ImGui::SmallButton("X"))
-                            {
-                                notifyToDelete = i;
+                                ImGui::SameLine();
+                                ImGui::TextDisabled("@");
+                                ImGui::SameLine();
+
+                                // Trigger Time
+                                ImGui::SetNextItemWidth(50);
+                                ImGui::DragFloat("##TriggerTime", &Notify.TriggerTime, 0.01f, 0.0f, 1.0f, "%.2f");
+                                if (ImGui::IsItemHovered())
+                                {
+                                    ImGui::SetTooltip("Transition progress (0.0 ~ 1.0)");
+                                }
+
+                                // 삭제 버튼 (오른쪽 정렬)
+                                ImGui::SameLine(ImGui::GetContentRegionAvail().x - 20);
+                                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+                                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+                                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.5f, 0.1f, 0.1f, 1.0f));
+                                if (ImGui::SmallButton("X"))
+                                {
+                                    notifyToDelete = i;
+                                }
+                                ImGui::PopStyleColor(3);
                             }
+                            ImGui::EndChild();
+                            ImGui::PopStyleColor();
 
                             ImGui::PopID();
                         }
@@ -1428,12 +1454,15 @@ ImGui::TextDisabled("Transition Conditions");
                         {
                             Trans->TransitionNotifies.RemoveAt(notifyToDelete);
                         }
+                        ImGui::PopID(); // "TransitionNotifies"
 
-                        if (ImGui::Button("Add Transition Notify", ImVec2(-1, 0)))
+                        ImGui::Spacing();
+
+                        if (ImGui::Button("+ Add Notify", ImVec2(-1, 25)))
                         {
                             FAnimNotifyEvent NewNotify;
                             NewNotify.NotifyName = FName("NewTransitionNotify");
-                            NewNotify.TriggerTime = 0.5f; // 중간 지점
+                            NewNotify.TriggerTime = 0.5f;
                             NewNotify.Duration = 0.0f;
                             Trans->TransitionNotifies.Add(NewNotify);
                         }
