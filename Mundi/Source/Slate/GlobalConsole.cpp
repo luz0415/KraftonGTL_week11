@@ -46,11 +46,11 @@ void UGlobalConsole::Log(const char* fmt, ...)
 void UGlobalConsole::LogV(const char* fmt, va_list args)
 {
 #ifdef _EDITOR
-  /*  if (ConsoleWidget)
+	if (ConsoleWidget)
     {
         ConsoleWidget->VAddLog(fmt, args);
     }
-    else*/
+    else
     {
         // Fallback to OutputDebugString if console widget not available
         char tmp[1024];

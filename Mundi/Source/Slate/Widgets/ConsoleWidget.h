@@ -43,6 +43,19 @@ private:
 
 	bool bIsWindowPinned;    // 콘솔 창 고정(핀) 상태
 
+	// Text selection state
+	struct FTextSelection
+	{
+		int32 StartLine = -1;
+		int32 EndLine = -1;
+
+		bool IsActive() const { return StartLine >= 0 && EndLine >= 0; }
+		void Clear() { StartLine = -1; EndLine = -1; }
+	};
+
+	FTextSelection TextSelection;
+	bool bIsDragging = false;
+
 	// Helper methods
 	static int TextEditCallbackStub(ImGuiInputTextCallbackData* data);
 	int TextEditCallback(ImGuiInputTextCallbackData* data);

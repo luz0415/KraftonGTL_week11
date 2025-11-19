@@ -109,33 +109,46 @@ void UConsoleWidget::RenderToolbar()
 	if (ImGui::SmallButton("Copy"))
 	{
 		FString clipboard_text;
-		for (const FString& item : Items)
+
+		// 선택된 텍스트가 있으면 선택 영역만 복사
+		if (TextSelection.IsActive())
 		{
-			clipboard_text += item + "\n";
+			int32 Start = std::min(TextSelection.StartLine, TextSelection.EndLine);
+			int32 End = std::max(TextSelection.StartLine, TextSelection.EndLine);
+
+			if (Start >= 0 && End >= 0 && Start < Items.Num() && End < Items.Num())
+			{
+				int32 idx = 0;
+				for (const FString& item : Items)
+				{
+					if (idx >= Start && idx <= End)
+					{
+						clipboard_text += item + "\n";
+					}
+					++idx;
+				}
+			}
+		}
+		else
+		{
+			// 선택 영역이 없으면 전체 복사
+			for (const FString& item : Items)
+			{
+				clipboard_text += item + "\n";
+			}
 		}
 
 		if (!clipboard_text.empty())
 		{
-			if (OpenClipboard(nullptr))
+			ImGui::SetClipboardText(clipboard_text.c_str());
+			if (TextSelection.IsActive())
 			{
-				EmptyClipboard();
-				HGLOBAL hClipboardData = GlobalAlloc(GMEM_MOVEABLE, clipboard_text.size() + 1);
-				if (hClipboardData)
-				{
-					char* pchData = static_cast<char*>(GlobalLock(hClipboardData));
-					if (pchData)
-					{
-						memcpy(pchData, clipboard_text.c_str(), clipboard_text.size() + 1);
-						GlobalUnlock(hClipboardData);
-						SetClipboardData(CF_TEXT, hClipboardData);
-					}
-				}
-				CloseClipboard();
-				AddLog("[info] Copied %d lines to clipboard", Items.Num());
+				int32 LineCount = std::abs(TextSelection.EndLine - TextSelection.StartLine) + 1;
+				AddLog("[info] Copied %d selected line(s) to clipboard", LineCount);
 			}
 			else
 			{
-				AddLog("[error] Failed to open clipboard");
+				AddLog("[info] Copied %d lines to clipboard", Items.Num());
 			}
 		}
 	}
@@ -196,10 +209,49 @@ void UConsoleWidget::RenderLogOutput()
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 
+		ImDrawList* DrawList = ImGui::GetWindowDrawList();
+		float LineHeight = ImGui::GetTextLineHeight();
+
+		// 마우스 입력 처리
+		ImVec2 MousePos = ImGui::GetMousePos();
+		bool bIsWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+
+		// ESC 또는 다른 곳 클릭 시 선택 해제
+		if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+		{
+			TextSelection.Clear();
+			bIsDragging = false;
+		}
+
+		// 윈도우 밖 클릭 시 선택 해제
+		if (!bIsWindowHovered && ImGui::IsMouseClicked(0))
+		{
+			TextSelection.Clear();
+			bIsDragging = false;
+		}
+
+		// 선택 영역 계산
+		int32 StartLine = TextSelection.IsActive() ? std::min(TextSelection.StartLine, TextSelection.EndLine) : -1;
+		int32 EndLine = TextSelection.IsActive() ? std::max(TextSelection.StartLine, TextSelection.EndLine) : -1;
+
+		// 1단계: 로그 렌더링하면서 위치 정보 수집
+		struct FRenderedLine
+		{
+			ImVec2 Min;
+			ImVec2 Max;
+			int32 Index;
+		};
+		TArray<FRenderedLine> RenderedLines;
+		RenderedLines.Reserve(Items.Num());
+
+		int32 LogIndex = 0;
 		for (const FString& item : Items)
 		{
 			if (!Filter.PassFilter(item.c_str()))
+			{
+				++LogIndex;
 				continue;
+			}
 
 			// Color coding for different log levels
 			ImVec4 color;
@@ -223,9 +275,160 @@ void UConsoleWidget::RenderLogOutput()
 
 			if (has_color)
 				ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+			ImVec2 LineMin = ImGui::GetCursorScreenPos();
 			ImGui::TextUnformatted(item.c_str());
+			ImVec2 LineMax = ImGui::GetCursorScreenPos();
+
 			if (has_color)
 				ImGui::PopStyleColor();
+
+			// 렌더링된 라인 정보 저장
+			ImVec2 TextSize = ImGui::CalcTextSize(item.c_str());
+			RenderedLines.Add({
+				LineMin,
+				ImVec2(LineMin.x + TextSize.x, LineMax.y),
+				LogIndex
+			});
+
+			++LogIndex;
+		}
+
+		// 마우스 드래그 처리
+		static int32 ClickedLineOnPress = -1;
+		static bool bWasSingleLineSelected = false;
+		static int32 PreviouslySelectedLine = -1;
+
+		if (bIsWindowHovered && ImGui::IsMouseClicked(0))
+		{
+			// 클릭 전 선택 상태 저장
+			bWasSingleLineSelected = (TextSelection.IsActive() && TextSelection.StartLine == TextSelection.EndLine);
+			PreviouslySelectedLine = bWasSingleLineSelected ? TextSelection.StartLine : -1;
+
+			// 클릭한 라인 찾기
+			ClickedLineOnPress = -1;
+			for (const FRenderedLine& Line : RenderedLines)
+			{
+				if (MousePos.y >= Line.Min.y && MousePos.y < Line.Min.y + LineHeight)
+				{
+					ClickedLineOnPress = Line.Index;
+					break;
+				}
+			}
+
+			// 다중 라인 선택 상태에서 클릭 시 선택 해제만
+			if (TextSelection.IsActive() && !bWasSingleLineSelected)
+			{
+				TextSelection.Clear();
+				bIsDragging = false;
+			}
+			// 단일 라인 또는 선택 없는 상태에서 클릭 시 새로운 선택 시작
+			else if (ClickedLineOnPress >= 0)
+			{
+				bIsDragging = true;
+				TextSelection.StartLine = ClickedLineOnPress;
+				TextSelection.EndLine = ClickedLineOnPress;
+			}
+		}
+
+		if (bIsDragging && ImGui::IsMouseDown(0))
+		{
+			// 드래그 중 - EndLine 업데이트
+			for (const FRenderedLine& Line : RenderedLines)
+			{
+				if (MousePos.y >= Line.Min.y && MousePos.y < Line.Min.y + LineHeight)
+				{
+					TextSelection.EndLine = Line.Index;
+					break;
+				}
+			}
+		}
+
+		if (ImGui::IsMouseReleased(0))
+		{
+			// 단일 라인 토글: 드래그 없이 같은 라인을 다시 클릭한 경우
+			if (bIsDragging && bWasSingleLineSelected &&
+				TextSelection.IsActive() &&
+				TextSelection.StartLine == TextSelection.EndLine &&
+				PreviouslySelectedLine == ClickedLineOnPress &&
+				!ImGui::IsMouseDragging(0, 1.0f))
+			{
+				TextSelection.Clear();
+			}
+
+			bIsDragging = false;
+		}
+
+		// 선택 영역 하이라이트
+		if (TextSelection.IsActive())
+		{
+			const ImU32 HighlightColor = IM_COL32(70, 100, 200, 128);
+
+			if (bIsDragging)
+			{
+				// 드래그 중: 화면 밖 선택 영역도 표시
+				ImVec2 WindowPos = ImGui::GetWindowPos();
+				float VirtualY = WindowPos.y + ImGui::GetStyle().WindowPadding.y - ImGui::GetScrollY();
+
+				for (int32 idx = 0; idx < Items.Num(); ++idx)
+				{
+					if (idx < StartLine || idx > EndLine) continue;
+
+					// 화면에 렌더링된 라인 찾기
+					bool bFound = false;
+					for (const FRenderedLine& Line : RenderedLines)
+					{
+						if (Line.Index == idx)
+						{
+							DrawList->AddRectFilled(Line.Min, ImVec2(Line.Max.x, Line.Min.y + LineHeight), HighlightColor);
+							bFound = true;
+							break;
+						}
+					}
+
+					// 화면 밖 라인은 가상 위치에 표시
+					if (!bFound)
+					{
+						ImVec2 SelMin = ImVec2(WindowPos.x, VirtualY + idx * LineHeight);
+						ImVec2 SelMax = ImVec2(SelMin.x + 1000.0f, SelMin.y + LineHeight);
+						DrawList->AddRectFilled(SelMin, SelMax, HighlightColor);
+					}
+				}
+			}
+			else
+			{
+				// 드래그 완료: 화면에 보이는 것만 하이라이트
+				for (const FRenderedLine& Line : RenderedLines)
+				{
+					if (Line.Index >= StartLine && Line.Index <= EndLine)
+					{
+						DrawList->AddRectFilled(Line.Min, ImVec2(Line.Max.x, Line.Min.y + LineHeight), HighlightColor);
+					}
+				}
+			}
+		}
+
+		// Ctrl+C로 복사
+		if (TextSelection.IsActive() && ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_C))
+		{
+			FString SelectedText;
+			int32 Start = std::min(TextSelection.StartLine, TextSelection.EndLine);
+			int32 End = std::max(TextSelection.StartLine, TextSelection.EndLine);
+
+			if (Start >= 0 && End >= 0 && Start < Items.Num() && End < Items.Num())
+			{
+				int32 idx = 0;
+				for (const FString& item : Items)
+				{
+					if (idx >= Start && idx <= End)
+					{
+						SelectedText += item + "\n";
+					}
+					++idx;
+				}
+
+				ImGui::SetClipboardText(SelectedText.c_str());
+			}
 		}
 
 		// Auto scroll to bottom
